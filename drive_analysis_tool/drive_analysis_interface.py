@@ -3,7 +3,7 @@ import sys
 import os
 from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QFileDialog, QSlider, QGridLayout, QLabel, \
     QTreeView, QAbstractItemView, QHeaderView, QCheckBox
-from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool, QVariant
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from copy import deepcopy
 from compress_and_prune_v4_1 import read_and_count, simplify_tree
@@ -48,6 +48,7 @@ class DriveAnalysisWidget(QWidget):
         # self.root_path = os.path.expanduser('~')  # BUG 2018-09-18: No permission to access certain files for os.stat
         self.root_path = os.path.expanduser('~\\Downloads')
         self.threadpool = QThreadPool()
+        self.resize_mode = 'dynamic'
 
         select_btn = QPushButton('Select Folder', self)
         select_btn.setToolTip('Select <b>root folder</b> to simplify.')
@@ -143,9 +144,9 @@ class DriveAnalysisWidget(QWidget):
 
     def build_tree_finished(self, result):
         self.og_dir_dict, self.dir_dict = result
-        print(self.og_dir_dict[1],self.og_dir_dict[2], self.og_dir_dict[3])
+        # print(self.og_dir_dict[1],self.og_dir_dict[2], self.og_dir_dict[3])
 
-        # self.refresh_treeview(self.ogmodel, self.ogtree, self.og_dir_dict)
+        self.refresh_treeview(self.ogmodel, self.ogtree, self.og_dir_dict)
         # #BUG 2018-09-18: crashes the interface because i am referring to non-existent dictionary keys
         # (see append_all_children, e.g., dir_dict[dirkey][0])
         # I've updated my dir_dict to use string names instead of integers so append_all_children
@@ -170,14 +171,30 @@ class DriveAnalysisWidget(QWidget):
         tree.expandToDepth(0)
 
     def append_all_children(self, dirkey, dir_dict, qitem):
-        qitem.appendRow([QStandardItem(dir_dict[dirkey][0]),
-                         QStandardItem(str(dir_dict[dirkey][4])),
-                         QStandardItem(str(len(dir_dict[dirkey][3])))])
+        qitem.setData(dirkey, Qt.UserRole)  # PAUSING HERE FOR NOW 20180918-1254
+        # print(qitem.data(Qt.UserRole))
+        dirname = QStandardItem(dir_dict[dirkey]['dirname'])
+        nfiles = QStandardItem(str(dir_dict[dirkey]['nfiles']))
+        # dirname.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        # dirname.setData(QVariant(Qt.Checked), Qt.CheckStateRole)
+        dirname.setCheckable(True)
+        dirname.setCheckState(Qt.Checked)  # Qt.Checked == 2
+        # dirname.setData(QVariant(str(dirkey)), role=Qt.UserRole+1)  # doesn't work
+        # qitem.appendRow([QStandardItem(dir_dict[dirkey]['dirname']),
+        #                  QStandardItem(str(dir_dict[dirkey]['nfiles']))])
+        qitem.appendRow([dirname, nfiles])
         current_row = qitem.rowCount()-1
-        children_keys = dir_dict[dirkey][2]
-        children_names = [dir_dict[child][0].lower() for child in children_keys]
+        children_keys = dir_dict[dirkey]['childkeys']
+        children_names = [dir_dict[child]['dirname'].lower() for child in children_keys]
         for child_name, child_key in sorted(zip(children_names, children_keys)):
             self.append_all_children(child_key, dir_dict, qitem.child(current_row))
+
+    def selection_change(self, dirkey, dir_dict, qitem):
+        # just a framework, nothing implemented here yet
+        current_row = qitem.rowCount() - 1
+        children_keys = dir_dict[dirkey]['childkeys']
+        for child_name, child_key in sorted(children_keys):
+            self.selection_change(child_key, dir_dict, qitem.child(current_row))
 
 
 if __name__ == '__main__':

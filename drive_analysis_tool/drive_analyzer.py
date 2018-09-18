@@ -28,7 +28,7 @@ def record_stat(root):
                               'dirparent': dirparent,  # parent key [1]
                               'childkeys': [os.path.join(dirpath, dir_) for dir_ in dirnames],  # children keys [2]
                               # 'files': filenames,  # names of files found in directory [3]
-                              'files': len(filenames),  # number of files found in directory [3]
+                              'nfiles': len(filenames),  # number of files found in directory [3]
                               'cumfiles': len(filenames),  # cumulative count of accessible files [4]
                               # 'filestat':  {f_: os.stat(os.path.join(dirpath, f_)) for f_ in filenames},
                               'filestat': [os.stat(os.path.join(dirpath, f_)) for f_ in filenames],
