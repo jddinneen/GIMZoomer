@@ -106,6 +106,20 @@ def find_all_children(dirkey, dir_dict):
     return children
 
 
+def anonymize_stat_old(dir_dict, rename_dict, remove_dict):
+    # Anonymize dir_dict by removing some dirs and renaming some dirs.
+    # If a directory is removed, remove its children and remove its parent's reference to it.
+    for dirkey in rename_dict.keys():
+        dir_dict[dirkey]['dirname'] = rename_dict[dirkey]['dirname']
+    for dirkey in sorted(remove_dict.keys()):
+        children = find_all_children(dirkey, dir_dict)
+        parent = dir_dict['dirparent']
+        for child in children:
+            dir_dict.pop(child)
+        dir_dict[parent]['childkeys'] = list(set(dir_dict[parent]['childkeys']).difference(set([dirkey])))
+    return dir_dict
+
+
 def anonymize_stat(dir_dict, removed_dirs, renamed_dirs=None):
     # Anonymize dir_dict by removing some dirs and renaming some dirs.
     # If a directory is removed, remove its children and remove its parent's reference to it.
