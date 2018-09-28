@@ -2,15 +2,17 @@ import time
 import pickle
 import _pickle
 import traceback
+import json
 import sys
 import os
 from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QFileDialog, QSlider, QGridLayout, QLabel, \
-    QTreeView, QAbstractItemView, QHeaderView, QCheckBox, QTreeWidget, QTreeWidgetItem
+    QTreeView, QAbstractItemView, QHeaderView, QCheckBox, QTreeWidget, QTreeWidgetItem, QTextBrowser
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool, QVariant, QItemSelectionModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from copy import deepcopy
-from compress_and_prune_v4_1 import read_and_count, simplify_tree
-from drive_analysis_tool.drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children
+from drive_analysis_tool.drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children, \
+    drive_measurement, check_collection_properties
+from drive_analysis_tool.submit_data import compress_data, encrypt_data, dropbox_upload, generate_filename
 
 
 # BUG ALERT
@@ -51,6 +53,7 @@ class DriveAnalysisWidget(QWidget):
         # self.root_path = os.path.expanduser('~')
         # self.root_path = os.path.expanduser('~\\Downloads')
         self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+        self.dbx_json_dirpath = '/'
         self.threadpool = QThreadPool()
         self.expanded_items_list = []
         self.unchecked_items_list = []
@@ -63,6 +66,8 @@ class DriveAnalysisWidget(QWidget):
         # self.anon_dir_dict = deepcopy(self.og_dir_dict)
 
         self.og_dir_dict, self.anon_dir_dict = dict(), dict()
+        self.user_folder_props = dict()
+        self.user_folder_typical = True
         self.build_tree_structure_threaded(self.root_path)
 
         # test_btn = QPushButton()
@@ -82,7 +87,7 @@ class DriveAnalysisWidget(QWidget):
 
         submit_btn = QPushButton('Submit', self)
         submit_btn.setToolTip('Submit encrypted folder data to the cloud')
-        submit_btn.clicked.connect(self.submit_file)
+        submit_btn.clicked.connect(self.upload_collected_data)
         submit_btn.resize(submit_btn.sizeHint())
 
         self.folder_edit = QLabel()
@@ -93,8 +98,12 @@ class DriveAnalysisWidget(QWidget):
         self.status_label.setStyleSheet("color: red;"
                                         "font: bold;")
 
-        self.characteristics_personal_folder = QLabel()
-        # Do something about me please....
+        self.user_folder_props_label = QLabel()
+        self.user_folder_props_label.setText('\n'*21)
+
+        self.user_folder_typical_label = QLabel()
+        self.user_folder_typical_label.setText('\n')
+        self.user_folder_typical_label.setStyleSheet("font: bold;")
 
         og_tree_label = QLabel()
         og_tree_label.setAlignment(Qt.AlignCenter)
@@ -132,7 +141,10 @@ class DriveAnalysisWidget(QWidget):
         grid.addWidget(anon_tree_label, 2, 5, 1, 3)
         grid.addWidget(self.og_tree, 3, 0, 1, 5)
         grid.addWidget(self.anon_tree, 3, 5, 1, 3)
-        grid.addWidget(preview_btn, 4, 7, 1, 1)
+        grid.addWidget(preview_btn, 4, 6, 1, 1)
+        grid.addWidget(submit_btn, 4, 7, 1, 1)
+        grid.addWidget(self.user_folder_props_label, 5, 0, 1, 8)
+        grid.addWidget(self.user_folder_typical_label, 6, 0, 1, 1)
 
         self.setLayout(grid)
         self.resize(1280, 720)
@@ -306,6 +318,7 @@ class DriveAnalysisWidget(QWidget):
         self.list_expanded(self.og_tree, self.og_root_item, 0, self.expanded_items_list)
         self.expand_items(self.anon_tree, self.anon_root_item, 0, self.expanded_items_list)
         print(start - time.time())
+        self.display_user_folder_props()
 
     def preview_anon_tree_threaded(self):
         worker = Worker(self.preview_anon_tree)
@@ -319,6 +332,15 @@ class DriveAnalysisWidget(QWidget):
     def preview_anon_tree_finished(self):
         self.status_label.setText('')
 
+    def display_user_folder_props(self):
+        self.user_folder_props = drive_measurement(self.anon_dir_dict)
+        self.user_folder_typical = check_collection_properties(self.user_folder_props)
+        status_str = ''
+        for key in self.user_folder_props.keys():
+            status_str += key + ': ' + str(self.user_folder_props[key]) + '\n'
+        self.user_folder_props_label.setText(status_str)
+        self.user_folder_typical_label.setText('Values are typical: ' + str(self.user_folder_typical))
+
     def show_file_dialog(self):
         dirpath = QFileDialog.getExistingDirectory(self, 'Select Folder', self.root_path)
         if dirpath:
@@ -326,8 +348,14 @@ class DriveAnalysisWidget(QWidget):
             self.folder_edit.setText(self.root_path)
             self.build_tree_structure_threaded(self.root_path)
 
-    def submit_file(self, anon_dir_dict):
-        pass
+    def upload_collected_data(self, data):
+        data = bytes(json.dumps(data), 'utf8')
+        data = compress_data(data)
+        encrypted_json, encrypted_jsonkey = encrypt_data(data)
+        dropbox_upload(encrypted_json,
+                       generate_filename(self.dbx_json_dirpath, suffix='_dir_dict.enc'))
+        dropbox_upload(encrypted_jsonkey,
+                       generate_filename(self.dbx_json_dirpath, suffix='_sym_key.enc'))
 
     def test_script(self):
         unchecked_items_list = []

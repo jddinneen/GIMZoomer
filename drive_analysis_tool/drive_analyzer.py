@@ -74,6 +74,7 @@ def record_stat(root):
 
     # print_tree(root, dir_dict)
     # print('\n')
+    assign_folder_depth(1, dir_dict)
     return dir_dict
 
 
@@ -281,7 +282,7 @@ if __name__ == "__main__":
     #     dir_dict = pickle.load(ddf)
     print(test_dir_dict[1])
     print(test_dir_dict[2])
-    assign_folder_depth(1, test_dir_dict)
-    test_dir_dict_prop = drive_measurement(test_dir_dict)
-    print(test_dir_dict_prop)
-    print(check_collection_properties(test_dir_dict_prop))
+    # assign_folder_depth(1, test_dir_dict)
+    test_dir_dict_props = drive_measurement(test_dir_dict)
+    print(test_dir_dict_props)
+    print(check_collection_properties(test_dir_dict_props))

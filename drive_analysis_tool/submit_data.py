@@ -24,6 +24,8 @@ cwIDAQAB
 -----END PUBLIC KEY-----
 '''
 
+dbx_access_token = ''
+
 
 def generate_filename(dirpath, name_length=16, sep='/', time_suffix=True, prefix=None, suffix=None):
     current_time = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
@@ -41,8 +43,8 @@ def generate_filename(dirpath, name_length=16, sep='/', time_suffix=True, prefix
     return filepath
 
 
-def encrypt_fernet_key(fernet_key, public_rsa_key):
-    public_key = serialization.load_pem_public_key(public_rsa_key, default_backend())
+def encrypt_fernet_key(fernet_key, public_key):
+    public_key = serialization.load_pem_public_key(public_key, default_backend())
     encrypted_key = public_key.encrypt(fernet_key, padding=padding.OAEP(
         mgf=padding.MGF1(algorithm=hashes.SHA256()),
         algorithm=hashes.SHA256(),
@@ -54,17 +56,19 @@ def compress_data(bytes_data):
     return lzma.compress(bytes_data)
 
 
-def encrypt_data(bytes_data, public_rsa_key):
+def encrypt_data(bytes_data, public_key=public_rsa_key):
     key = Fernet.generate_key()
     f_ = Fernet(key)
     encrypted_data = f_.encrypt(bytes_data)
-    encrypted_key = encrypt_fernet_key(key, public_rsa_key)
+    encrypted_key = encrypt_fernet_key(key, public_key)
     return encrypted_data, encrypted_key
 
 
-def dropbox_upload(bytes_data, filepath, access_token_path):
-    with open(access_token_path) as token_f:
-        access_token = token_f.read()
+def dropbox_upload(bytes_data, filepath, access_token=dbx_access_token, access_token_path=None):
+    # exposing access token is unsafe but whatevs
+    if access_token_path:
+        with open(access_token_path) as token_f:
+            access_token = token_f.read()
     dbx = dropbox.Dropbox(access_token)
     dbx.files_upload(bytes_data, filepath)
 
@@ -89,7 +93,7 @@ if __name__ == '__main__':
     dir_dict_json = compress_data(dir_dict_json)
 
     # Encrypt and save test dict and Fernet key
-    encrypted_json, encrypted_jsonkey = encrypt_data(dir_dict_json, public_rsa_key)
+    encrypted_json, encrypted_jsonkey = encrypt_data(dir_dict_json)
     with open(json_filepath, 'wb') as json_file:
         json_file.write(encrypted_json)
     with open(jsonkey_filepath, 'wb') as jsonkey_file:
@@ -98,7 +102,7 @@ if __name__ == '__main__':
     # Upload dict and Fernet key to Dropbox
     dropbox_upload(encrypted_json,
                    generate_filename(dbx_json_dirpath, suffix='_dir_dict.enc'),
-                   dropbox_access_token_filepath)
+                   access_token_path=dropbox_access_token_filepath)
     dropbox_upload(encrypted_jsonkey,
                    generate_filename(dbx_json_dirpath, suffix='_sym_key.enc'),
-                   dropbox_access_token_filepath)
+                   access_token_path=dropbox_access_token_filepath)
