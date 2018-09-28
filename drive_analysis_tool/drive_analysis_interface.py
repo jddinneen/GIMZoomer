@@ -42,6 +42,7 @@ class Worker(QRunnable):
         finally:
             self.signals.finished.emit()
 
+
 class DriveAnalysisWidget(QWidget):
     def __init__(self):
         super().__init__()
@@ -79,6 +80,11 @@ class DriveAnalysisWidget(QWidget):
         preview_btn.clicked.connect(self.preview_anon_tree_threaded)
         preview_btn.resize(preview_btn.sizeHint())
 
+        submit_btn = QPushButton('Submit', self)
+        submit_btn.setToolTip('Submit encrypted folder data to the cloud')
+        submit_btn.clicked.connect(self.submit_file)
+        submit_btn.resize(submit_btn.sizeHint())
+
         self.folder_edit = QLabel()
         self.folder_edit.setText(self.root_path)
 
@@ -86,6 +92,9 @@ class DriveAnalysisWidget(QWidget):
         self.status_label.setText('')
         self.status_label.setStyleSheet("color: red;"
                                         "font: bold;")
+
+        self.characteristics_personal_folder = QLabel()
+        # Do something about me please....
 
         og_tree_label = QLabel()
         og_tree_label.setAlignment(Qt.AlignCenter)
@@ -316,6 +325,9 @@ class DriveAnalysisWidget(QWidget):
             self.root_path = os.path.abspath(dirpath)
             self.folder_edit.setText(self.root_path)
             self.build_tree_structure_threaded(self.root_path)
+
+    def submit_file(self, anon_dir_dict):
+        pass
 
     def test_script(self):
         unchecked_items_list = []
