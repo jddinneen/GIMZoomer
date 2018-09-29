@@ -11,9 +11,9 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QFileDialog, QSl
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool, QVariant, QItemSelectionModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from copy import deepcopy
-from drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children, \
+from drive_analysis_tool.drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children, \
     drive_measurement, check_collection_properties
-from submit_data import compress_data, encrypt_data, dropbox_upload, generate_filename
+from drive_analysis_tool.submit_data import compress_data, encrypt_data, dropbox_upload, generate_filename
 
 
 # BUG ALERT
@@ -51,9 +51,9 @@ class DriveAnalysisWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle('Drive Analysis Tool')
-        self.root_path = os.path.expanduser('~')
+        # self.root_path = os.path.expanduser('~')
         # self.root_path = os.path.expanduser('~\\Downloads')
-        # self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+        self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
         self.dbx_json_dirpath = '/'
         self.threadpool = QThreadPool()
         self.expanded_items_list = []

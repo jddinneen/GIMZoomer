@@ -5,15 +5,16 @@ import traceback
 import json
 import sys
 import os
+from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QFileDialog, QSlider, QGridLayout, QLabel, \
     QTreeView, QAbstractItemView, QHeaderView, QCheckBox, QTreeWidget, QTreeWidgetItem, QTextBrowser, \
     QTableWidget, QTableWidgetItem
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool, QVariant, QItemSelectionModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from copy import deepcopy
-from drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children, \
+from drive_analysis_tool.drive_analyzer import record_stat, compute_stat, anonymize_stat, find_all_children, \
     drive_measurement, check_collection_properties
-from submit_data import compress_data, encrypt_data, dropbox_upload, generate_filename
+from drive_analysis_tool.submit_data import compress_data, encrypt_data, dropbox_upload, generate_filename
 
 
 # BUG ALERT
@@ -51,10 +52,12 @@ class DriveAnalysisWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle('Drive Analysis Tool')
-        self.root_path = os.path.expanduser('~')
+        # self.root_path = os.path.expanduser('~')
         # self.root_path = os.path.expanduser('~\\Downloads')
-        # self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+        self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+        self.root_path2 = ''
         self.dbx_json_dirpath = '/'
+        self.have_two_roots = False
         self.threadpool = QThreadPool()
         self.expanded_items_list = []
         self.unchecked_items_list = []
@@ -67,6 +70,7 @@ class DriveAnalysisWidget(QWidget):
         # self.anon_dir_dict = deepcopy(self.og_dir_dict)
 
         self.og_dir_dict, self.anon_dir_dict = dict(), dict()
+        self.og_dir_dict2, self.anon_dir_dict2 = dict(), dict()
         self.user_folder_props = dict()
         self.user_folder_typical = True
         self.build_tree_structure_threaded(self.root_path)
@@ -76,10 +80,15 @@ class DriveAnalysisWidget(QWidget):
         # test_btn.resize(test_btn.sizeHint())
         # test_btn.clicked.connect(self.test_script)
 
-        select_btn = QPushButton('Select Folder', self)
-        select_btn.setToolTip('Select <b>personal folder</b> for data collection.')
+        select_btn = QPushButton('Select Root 1', self)
+        select_btn.setToolTip('Select <b>personal folder 1</b> for data collection.')
         select_btn.clicked.connect(self.show_file_dialog)
         select_btn.resize(select_btn.sizeHint())
+
+        select_btn2 = QPushButton('Select Root 2', self)
+        select_btn2.setToolTip('Select <b>personal folder 2</b> (if present) for data collection.')
+        select_btn2.clicked.connect(self.show_file_dialog2)
+        select_btn2.resize(select_btn2.sizeHint())
 
         preview_btn = QPushButton('Preview', self)
         preview_btn.setToolTip('Preview folder data that will be used for research')
@@ -94,6 +103,9 @@ class DriveAnalysisWidget(QWidget):
 
         self.folder_edit = QLabel()
         self.folder_edit.setText(self.root_path)
+
+        self.folder_edit2 = QLabel()
+        self.folder_edit2.setText(self.root_path2)
 
         self.status_label = QLabel()
         self.status_label.setText('')
@@ -177,24 +189,27 @@ class DriveAnalysisWidget(QWidget):
         grid = QGridLayout()
         grid.addWidget(select_btn, 0, 0, 1, 1)
         grid.addWidget(self.folder_edit, 0, 1, 1, 7)
+        grid.addWidget(select_btn2, 1, 0, 1, 1)
+        grid.addWidget(self.folder_edit2, 1, 1, 1, 7)
         # grid.addWidget(self.status_label, 1, 0, 1, 8)
-        grid.addWidget(og_tree_label, 1, 0, 1, 5)
-        grid.addWidget(anon_tree_label, 1, 5, 1, 3)
-        grid.addWidget(self.og_tree, 2, 0, 1, 5)
-        grid.addWidget(self.anon_tree, 2, 5, 1, 3)
-        grid.addWidget(self.user_folder_props_label, 3, 0, 1, 8)
-        grid.addWidget(self.user_folder_props_table, 4, 0, 2, 8)
+        grid.addWidget(og_tree_label, 2, 0, 1, 5)
+        grid.addWidget(anon_tree_label, 2, 5, 1, 3)
+        grid.addWidget(self.og_tree, 3, 0, 1, 5)
+        grid.addWidget(self.anon_tree, 3, 5, 1, 3)
+        grid.addWidget(self.user_folder_props_label, 4, 0, 1, 8)
+        grid.addWidget(self.user_folder_props_table, 5, 0, 2, 8)
         # grid.addWidget(self.user_folder_typical_label, 7, 0, 1, 6)
-        grid.addWidget(self.status_label, 7, 0, 1, 6)
-        grid.addWidget(preview_btn, 7, 6, 1, 1)
-        grid.addWidget(self.submit_btn, 7, 7, 1, 1)
+        grid.addWidget(self.status_label, 8, 0, 1, 6)
+        grid.addWidget(preview_btn, 8, 6, 1, 1)
+        grid.addWidget(self.submit_btn, 8, 7, 1, 1)
 
         self.setLayout(grid)
         self.resize(1280, 720)
         self.show()
 
-    def refresh_treeview(self, model, tree, dir_dict, checkable=True, anon_tree=False):
-        model.removeRow(0)
+    def refresh_treeview(self, model, tree, dir_dict, checkable=True, anon_tree=False, append=False):
+        if not append:
+            model.removeRow(0)
         root_item = model.invisibleRootItem()
         self.append_all_children(1, dir_dict, root_item, checkable, anon_tree)  # dir_dict key starts at 1 since 0==False
         # tree.setModel(model)
@@ -328,21 +343,25 @@ class DriveAnalysisWidget(QWidget):
     def on_item_change_finished(self):
         self.status_label.setText('')
 
-    def build_tree_structure_threaded(self, root_path):
+    def build_tree_structure_threaded(self, root_path, root_ix=1, append_to_tree=False):
         worker = Worker(record_stat, root_path)
         worker.signals.started.connect(self.build_tree_started)
-        worker.signals.result.connect(self.build_tree_finished)
+        worker.signals.result.connect(self.build_tree_midway)
+        worker.signals.finished.connect(lambda: self.build_tree_finished(append_to_tree))
         self.threadpool.start(worker)
 
     def build_tree_started(self):
         self.status_label.setText('Building tree, please wait...')
 
-    def build_tree_finished(self, result):
+    def build_tree_midway(self, result):
         self.og_dir_dict = result
         # self.anon_dir_dict = deepcopy(self.og_dir_dict)
         self.anon_dir_dict = _pickle.loads(_pickle.dumps(self.og_dir_dict))
-        self.refresh_treeview(self.og_model, self.og_tree, self.og_dir_dict)
-        self.refresh_treeview(self.anon_model, self.anon_tree, self.anon_dir_dict, checkable=False, anon_tree=True)
+
+    def build_tree_finished(self, append_to_tree):
+        self.refresh_treeview(self.og_model, self.og_tree, self.og_dir_dict, append=append_to_tree)
+        self.refresh_treeview(self.anon_model, self.anon_tree, self.anon_dir_dict,
+                              checkable=False, anon_tree=True, append=append_to_tree)
         self.status_label.setText('Click \'Preview\' to see changes')
 
     def preview_anon_tree(self):
@@ -402,6 +421,23 @@ class DriveAnalysisWidget(QWidget):
             self.root_path = os.path.abspath(dirpath)
             self.folder_edit.setText(self.root_path)
             self.build_tree_structure_threaded(self.root_path)
+
+    def show_file_dialog2(self):
+        dirpath = QFileDialog.getExistingDirectory(self, 'Select Folder', self.root_path)
+        if dirpath:
+            dirpath = os.path.abspath(dirpath)
+            if Path(self.root_path) in Path(dirpath).parents:
+                self.status_label.setText('Root folder 1 is a parent of root folder 2. '
+                                          'Navigate the existing tree to find root folder 2.')
+            elif Path(dirpath) in Path(self.root_path).parents:
+                self.status_label.setText('Root folder 2 is a parent of root folder 1. '
+                                          'Change root folder 1 to root folder 2 through '
+                                          '\'Select Root 1\'.')
+            else:
+                self.have_two_roots = True
+                self.root_path2 = dirpath
+                self.folder_edit2.setText(self.root_path2)
+                self.build_tree_structure_threaded(self.root_path2, append_to_tree=True)
 
     def upload_collected_data(self):
         data = bytes(json.dumps(self.anon_dir_dict), 'utf8')

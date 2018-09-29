@@ -1,6 +1,7 @@
 import os
 import statistics
 import pickle
+from collections import Counter
 
 
 def record_stat(root):
@@ -11,6 +12,7 @@ def record_stat(root):
     dir_dict = dict()
     order_dict = dict()
     dirorder = 1  # key starts as 1 since 0 can be interpreted as a boolean False
+    hidden_dirs = []
     for dirpath, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
         invalid_dirs = []
         for dir_ in dirnames:
@@ -19,6 +21,7 @@ def record_stat(root):
             except PermissionError:
                 invalid_dirs.append(dir_)
         dirnames = list(set(dirnames).difference(set(invalid_dirs)))
+        hidden_dirs += [os.path.join(dirpath, dir_) for dir_ in dirnames if dir_[0] == '.']
         dirnames[:] = [dir_ for dir_ in dirnames if dir_[0] != '.']
         filenames[:] = [file for file in filenames if file[0] != '.']
         if dirorder == 1:
@@ -72,6 +75,14 @@ def record_stat(root):
         # dir_dict[dirkey][2] = [order_dict[child] for child in dir_dict[dirkey][2]]
         dir_dict[dirkey]['childkeys'] = [order_dict[child] for child in dir_dict[dirkey]['childkeys']]
 
+    # Remove hidden dirs and their children
+    hidden_dirs = [order_dict[dirpath] for dirpath in hidden_dirs]
+    for dirkey in hidden_dirs:
+        hidden_dirs += find_all_children(dirkey, dir_dict)
+    hidden_dirs = list(set(hidden_dirs))
+    for dirkey in hidden_dirs:
+        dir_dict.pop(dirkey)
+
     # print_tree(root, dir_dict)
     # print('\n')
     assign_folder_depth(1, dir_dict)
@@ -81,10 +92,8 @@ def record_stat(root):
 def assign_folder_depth(dirkey, dir_dict):
     if dir_dict[dirkey]['dirparent']:
         dir_dict[dirkey]['depth'] = dir_dict[dir_dict[dirkey]['dirparent']]['depth'] + 1
-    else:
-        dir_dict[dirkey]['depth'] = 0
-    for childkey in dir_dict[dirkey]['childkeys']:
-        assign_folder_depth(childkey, dir_dict)
+    for child in dir_dict[dirkey]['childkeys']:
+        assign_folder_depth(child, dir_dict)
 
 
 def compute_stat(dir_dict):
@@ -125,9 +134,9 @@ def compute_stat(dir_dict):
 
 def find_all_children(dirkey, dir_dict):
     children = []
-    for child in dir_dict[dirkey][2]:
+    for child in dir_dict[dirkey]['childkeys']:
         children.extend(find_all_children(child, dir_dict))
-    children.extend(dir_dict[dirkey][2])
+    children.extend(dir_dict[dirkey]['childkeys'])
     return children
 
 
@@ -149,7 +158,7 @@ def anonymize_stat(dir_dict, removed_dirs, renamed_dirs=None):
 
 
 def drive_measurement(dir_dict):
-    breadth_counts = []
+    # breadth_counts = []
     leaf_folder_depths = []
     switch_folder_depths = []
     branching_n_folder_counts = []
@@ -183,7 +192,7 @@ def drive_measurement(dir_dict):
     for key in dir_dict.keys():
         n_files += dir_dict[key]['nfiles']
         n_file_counts.append(dir_dict[key]['nfiles'])
-        breadth_counts.append(len(dir_dict[key]['childkeys']))
+        # breadth_counts.append(len(dir_dict[key]['childkeys']))
         folder_depths.append(dir_dict[key]['depth'])
         if len(dir_dict[key]['childkeys']) == 0:  # identifies leaf nodes
             n_leaf_folders += 1
@@ -200,18 +209,20 @@ def drive_measurement(dir_dict):
             elif dir_dict[key]['nfiles'] > 0:
                 file_depths.append(dir_dict[key]['depth'])
 
-    breadth_max = max(breadth_counts)
-    breadth_mean = statistics.mean(breadth_counts)
-    pct_leaf_folders = n_leaf_folders / n_folders
+    # breadth_max = max(breadth_counts)
+    # breadth_mean = statistics.mean(breadth_counts)
+    breadth_max = Counter(folder_depths).most_common(1)[0][1]
+    breadth_mean = statistics.mean(Counter(folder_depths).values())
+    pct_leaf_folders = n_leaf_folders / n_folders * 100
     depth_leaf_folders_mean = statistics.mean(leaf_folder_depths)
-    pct_switch_folders = n_switch_folders / n_folders
+    pct_switch_folders = n_switch_folders / n_folders * 100
     depth_switch_folders_mean = statistics.mean(switch_folder_depths)
     depth_max = max(folder_depths)
     depth_folders_mode = statistics.mode(folder_depths)
     depth_folders_mean = statistics.mean(folder_depths)
     branching_factor = statistics.mean(branching_n_folder_counts)
     n_files_mean = statistics.mean(n_file_counts)
-    pct_empty_folders = n_empty_folders/n_folders
+    pct_empty_folders = n_empty_folders / n_folders * 100
     depth_files_mean = statistics.mean(file_depths)
     depth_files_mode = statistics.mode(file_depths)
 
@@ -242,7 +253,7 @@ def check_collection_properties(properties):
                       'breadth_mean': [290, 888],
                       'root_n_folders': [15, 18],
                       'n_leaf_folders': [2582, 18192],
-                      'pct_leaf_folders': [0.66, 0.80],
+                      'pct_leaf_folders': [66, 80],
                       'depth_leaf_folders_mean': [5.2, 8.8],
                       'n_switch_folders': [591, 4291],
                       'pct_switch_folders': [9, 23],
@@ -267,7 +278,7 @@ def check_collection_properties(properties):
 
 
 if __name__ == "__main__":
-    root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+    root_path = os.path.expanduser(os.path.join('~', 'Dropbox'))
     # root_path = os.path.expanduser(os.path.join('~', 'Downloads'))
     test_dir_dict = record_stat(root_path)
     test_dir_dict = compute_stat(test_dir_dict)
@@ -286,3 +297,8 @@ if __name__ == "__main__":
     test_dir_dict_props = drive_measurement(test_dir_dict)
     print(test_dir_dict_props)
     print(check_collection_properties(test_dir_dict_props))
+    depths_list = [test_dir_dict[key]['depth'] for key in test_dir_dict.keys()]
+    print(Counter(depths_list))
+    parents_list = [test_dir_dict[key]['dirparent'] for key in test_dir_dict.keys()]
+    len(parents_list)
+    len([x for x in parents_list if x])

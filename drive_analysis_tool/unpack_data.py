@@ -4,7 +4,7 @@ import lzma
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.fernet import Fernet
-from drive_analysis_tool.private_key import load_private_key
+from private_key import load_private_key
 
 
 def decrypt_data(json_filepath, jsonkey_filepath, private_key_filepath):
