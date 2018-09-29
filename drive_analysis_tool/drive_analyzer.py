@@ -282,7 +282,7 @@ if __name__ == "__main__":
     # root_path = os.path.expanduser(os.path.join('~', 'Downloads'))
     test_dir_dict = record_stat(root_path)
     test_dir_dict = compute_stat(test_dir_dict)
-    anonymize_stat(test_dir_dict, [1, 3, 5])
+    anonymize_stat(test_dir_dict, [1])
     test_dir_dict = record_stat(root_path)
     test_dir_dict = compute_stat(test_dir_dict)
     with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
@@ -292,13 +292,9 @@ if __name__ == "__main__":
     #                                           'code', 'drive_analysis_tool', 'dir_dict.pkl')), 'rb') as ddf:
     #     dir_dict = pickle.load(ddf)
     print(test_dir_dict[1])
-    print(test_dir_dict[2])
     # assign_folder_depth(1, test_dir_dict)
     test_dir_dict_props = drive_measurement(test_dir_dict)
     print(test_dir_dict_props)
     print(check_collection_properties(test_dir_dict_props))
     depths_list = [test_dir_dict[key]['depth'] for key in test_dir_dict.keys()]
     print(Counter(depths_list))
-    parents_list = [test_dir_dict[key]['dirparent'] for key in test_dir_dict.keys()]
-    len(parents_list)
-    len([x for x in parents_list if x])
