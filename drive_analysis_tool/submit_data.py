@@ -24,7 +24,7 @@ cwIDAQAB
 -----END PUBLIC KEY-----
 '''
 
-dbx_access_token = 'spPsxQjiSMkAAAAAAAAhZ5_nuAAccVBDUSAr64VcGCY5qO19IO8NCmDtsfq1FFBr'
+dbx_access_token = ''
 
 
 def generate_filename(name_length=16, time_suffix=True, prefix=None, suffix=None):

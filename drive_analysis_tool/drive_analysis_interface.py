@@ -52,11 +52,11 @@ class DriveAnalysisWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle('Drive Analysis Tool')
-        # self.root_path = os.path.expanduser('~')
+        self.root_path = os.path.expanduser('~')
         # self.root_path = os.path.expanduser('~\\Downloads')
-        self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
-        # self.root_path_2 = ''
-        self.root_path_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'academic'))
+        # self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill'))
+        self.root_path_2 = ''
+        # self.root_path_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'academic'))
         self.dbx_json_dirpath = '/'
         self.threadpool = QThreadPool()
         self.expanded_items_list = []
