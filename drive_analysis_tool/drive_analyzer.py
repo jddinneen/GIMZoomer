@@ -241,6 +241,91 @@ def drive_measurement(dir_dict):
     return {label: value for label, value in zip(labels, values)}
 
 
+def drive_measurement(dir_dict_list):
+    # breadth_counts = []
+    leaf_folder_depths = []
+    switch_folder_depths = []
+    branching_n_folder_counts = []
+    n_file_counts = []
+    folder_depths = []
+    file_depths = []
+
+    # n_roots: number of roots
+    n_files = 0
+    n_folders = sum([len(dir_dict.keys()) for dir_dict in dir_dict_list])
+    # breadth_max = 0
+    # breadth_mean = 0
+    root_n_folders = sum([len(dir_dict[1]['childkeys']) for dir_dict in dir_dict_list])
+    n_leaf_folders = 0
+    # pct_leaf_folders = 0
+    # depth_leaf_folders_mean = 0
+    n_switch_folders = 0
+    # pct_switch_folders = 0
+    # depth_switch_folders_mean = 0
+    # depth_max = 0
+    # depth_folders_mode = 0
+    # depth_folders_mean = 0
+    # branching_factor = 0
+    root_n_files = sum([dir_dict[1]['nfiles'] for dir_dict in dir_dict_list])
+    # n_files_mean = 0
+    n_empty_folders = 0
+    # pct_empty_folders = 0
+    # depth_files_mean = 0
+    # depth_files_mode = 0
+    file_breadth_mode_n_files = 0
+    for dir_dict in dir_dict_list:
+        for key in dir_dict.keys():
+            n_files += dir_dict[key]['nfiles']
+            n_file_counts.append(dir_dict[key]['nfiles'])
+            # breadth_counts.append(len(dir_dict[key]['childkeys']))
+            folder_depths.append(dir_dict[key]['depth'])
+            if len(dir_dict[key]['childkeys']) == 0:  # identifies leaf nodes
+                n_leaf_folders += 1
+                leaf_folder_depths.append(dir_dict[key]['depth'])
+                if dir_dict[key]['nfiles'] == 0:  # identifies empty folders
+                    n_empty_folders += 1
+                elif dir_dict[key]['nfiles'] > 0:
+                    file_depths.append(dir_dict[key]['depth'])
+            elif len(dir_dict[key]['childkeys']) > 0:  # not switch but not leaf nodes
+                branching_n_folder_counts.append(len(dir_dict[key]['childkeys']))
+                if dir_dict[key]['nfiles'] == 0:  # identifies switch nodes
+                    n_switch_folders += 1
+                    switch_folder_depths.append(dir_dict[key]['depth'])
+                elif dir_dict[key]['nfiles'] > 0:
+                    file_depths.append(dir_dict[key]['depth'])
+
+    # breadth_max = max(breadth_counts)
+    # breadth_mean = statistics.mean(breadth_counts)
+    breadth_max = Counter(folder_depths).most_common(1)[0][1]
+    breadth_mean = statistics.mean(Counter(folder_depths).values())
+    pct_leaf_folders = n_leaf_folders / n_folders * 100
+    depth_leaf_folders_mean = statistics.mean(leaf_folder_depths)
+    pct_switch_folders = n_switch_folders / n_folders * 100
+    depth_switch_folders_mean = statistics.mean(switch_folder_depths)
+    depth_max = max(folder_depths)
+    depth_folders_mode = statistics.mode(folder_depths)
+    depth_folders_mean = statistics.mean(folder_depths)
+    branching_factor = statistics.mean(branching_n_folder_counts)
+    n_files_mean = statistics.mean(n_file_counts)
+    pct_empty_folders = n_empty_folders / n_folders * 100
+    depth_files_mean = statistics.mean(file_depths)
+    depth_files_mode = statistics.mode(file_depths)
+
+    for key in dir_dict.keys():
+        if dir_dict[key]['depth'] == depth_files_mode:
+            file_breadth_mode_n_files += dir_dict[key]['nfiles']
+    labels = ['n_files', 'n_folders', 'breadth_max', 'breadth_mean', 'root_n_folders', 'n_leaf_folders',
+              'pct_leaf_folders', 'depth_leaf_folders_mean', 'n_switch_folders', 'pct_switch_folders',
+              'depth_switch_folders_mean', 'depth_max', 'depth_folders_mode', 'depth_folders_mean',
+              'branching_factor', 'root_n_files', 'n_files_mean', 'n_empty_folders', 'pct_empty_folders',
+              'depth_files_mean', 'depth_files_mode', 'file_breadth_mode_n_files']
+    values = [n_files, n_folders, breadth_max, breadth_mean, root_n_folders, n_leaf_folders, pct_leaf_folders,
+              depth_leaf_folders_mean, n_switch_folders, pct_switch_folders, depth_switch_folders_mean,
+              depth_max, depth_folders_mode, depth_folders_mean, branching_factor, root_n_files, n_files_mean,
+              n_empty_folders, pct_empty_folders, depth_files_mean, depth_files_mode, file_breadth_mode_n_files]
+    return {label: value for label, value in zip(labels, values)}
+
+
 def check_collection_properties(properties):
     labels = ['n_files', 'n_folders', 'breadth_max', 'breadth_mean', 'root_n_folders', 'n_leaf_folders',
               'pct_leaf_folders', 'depth_leaf_folders_mean', 'n_switch_folders', 'pct_switch_folders',
@@ -262,7 +347,7 @@ def check_collection_properties(properties):
                       'depth_folders_mode': [5, 7],
                       'depth_folders_mean': [6, 8],
                       'branching_factor': [3, 4.5],
-                      'root_n_files': [4, 8],
+                      'root_n_files': [2*x for x in [4, 8]],
                       'n_files_mean': [6, 8],
                       'n_empty_folders': [304, 3057],
                       'pct_empty_folders': [5, 12],

@@ -44,9 +44,9 @@ if __name__ == '__main__':
     # test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
     #                                           'code', 'drive_analysis_tool', 'sym_key.enc'))
     test_json_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                         'AhlirBlVwtU3GoiD_20181002_035338_dir_dict.enc'))
+                                                         'LnINOporpIGOJs58_20181206_060810_dir_dict_2.enc'))
     test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                            'S8QM5yWHxpCksYRq_20181002_035339_sym_key.enc'))
+                                                            'LnINOporpIGOJs58_20181206_060810_sym_key.enc'))
 
     test_dir_dict = decrypt_data(test_json_filepath, test_jsonkey_filepath, test_private_key_filepath)
     print(test_dir_dict[list(test_dir_dict.keys())[1]])
