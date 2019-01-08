@@ -25,7 +25,7 @@ cwIDAQAB
 '''
 
 with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                       'code', 'drive_analysis_tool', 'dbx_access_token.txt'))) as f:
+                                          'dbx_access_token.txt'))) as f:
     dbx_access_token = f.read()
 
 
