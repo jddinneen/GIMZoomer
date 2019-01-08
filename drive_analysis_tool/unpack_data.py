@@ -43,11 +43,41 @@ if __name__ == '__main__':
     #                                           'code', 'drive_analysis_tool', 'dir_dict.enc'))
     # test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
     #                                           'code', 'drive_analysis_tool', 'sym_key.enc'))
-    test_json_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                         'LnINOporpIGOJs58_20181206_060810_dir_dict_2.enc'))
+    test_json_filepath_1 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'g8kwGlNY9G1X4eOX_20190108_080730_dir_dict_1.enc'))
+    test_json_filepath_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'g8kwGlNY9G1X4eOX_20190108_080730_dir_dict_2.enc'))
+    test_json_filepath_3 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'g8kwGlNY9G1X4eOX_20190108_080730_dir_dict_3.enc'))
+    test_json_filepath_4 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'g8kwGlNY9G1X4eOX_20190108_080730_dir_dict_4.enc'))
     test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                            'LnINOporpIGOJs58_20181206_060810_sym_key.enc'))
+                                                            'g8kwGlNY9G1X4eOX_20190108_080730_sym_key.enc'))
 
-    test_dir_dict = decrypt_data(test_json_filepath, test_jsonkey_filepath, test_private_key_filepath)
-    print(test_dir_dict[list(test_dir_dict.keys())[1]])
-    print(test_dir_dict[list(test_dir_dict.keys())[2]])
+    test_dir_dict_1 = decrypt_data(test_json_filepath_1, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[1]])
+    print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[2]])
+    test_dir_dict_2 = decrypt_data(test_json_filepath_2, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_2[sorted(test_dir_dict_2.keys())[1]])
+    print(test_dir_dict_2[sorted(test_dir_dict_2.keys())[2]])
+    test_dir_dict_3 = decrypt_data(test_json_filepath_3, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_3[sorted(test_dir_dict_3.keys())[1]])
+    print(test_dir_dict_3[sorted(test_dir_dict_3.keys())[2]])
+    test_dir_dict_4 = decrypt_data(test_json_filepath_4, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_4[sorted(test_dir_dict_4.keys())[1]])
+    print(test_dir_dict_4[sorted(test_dir_dict_4.keys())[2]])
+
+    print('')
+    test_json_filepath_1 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'ZrhSRNNdqrlHZWv1_20190108_102814_dir_dict_1.enc'))
+    test_json_filepath_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                           'ZrhSRNNdqrlHZWv1_20190108_102814_dir_dict_2.enc'))
+    test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
+                                                            'ZrhSRNNdqrlHZWv1_20190108_102814_sym_key.enc'))
+    test_dir_dict_1 = decrypt_data(test_json_filepath_1, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[1]])
+    print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[2]])
+    test_dir_dict_2 = decrypt_data(test_json_filepath_2, test_jsonkey_filepath, test_private_key_filepath)
+    print(test_dir_dict_2[sorted(test_dir_dict_2.keys())[1]])
+    print(test_dir_dict_2[sorted(test_dir_dict_2.keys())[2]])
+
