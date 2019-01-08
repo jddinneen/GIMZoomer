@@ -48,8 +48,8 @@ def record_stat(root):
                                           'size': f_stat.st_size,
                                           'atime': f_stat.st_atime,
                                           'mtime': f_stat.st_mtime,
-                                          'ctime': f_stat.st_ctime,
-                                          'file_attributes': f_stat.st_file_attributes})
+                                          'ctime': f_stat.st_ctime})
+                                          # 'file_attributes': f_stat.st_file_attributes})
                 except OSError:
                     pass
         dir_dict[dirorder] = {'dirname': os.path.split(dirpath)[1],  # directory name [0]
