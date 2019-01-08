@@ -24,7 +24,9 @@ cwIDAQAB
 -----END PUBLIC KEY-----
 '''
 
-dbx_access_token = ''
+with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
+                       'code', 'drive_analysis_tool', 'dbx_access_token.txt'))) as f:
+    dbx_access_token = f.read()
 
 
 def generate_filename(name_length=16, time_suffix=True, prefix=None, suffix=None):

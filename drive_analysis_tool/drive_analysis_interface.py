@@ -926,7 +926,7 @@ class DriveAnalysisWidget(QWidget):
                 value_item.setTextAlignment(Qt.AlignRight)
                 value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 self.user_folder_props_table.setItem(row, 1, value_item)
-        self.user_folder_typical = True  # for testing upload, comment out if not testing
+        # self.user_folder_typical = True  # for testing upload, comment out if not testing
         if self.user_folder_typical:
             self.submit_btn.setEnabled(True)
             is_typical_str = 'Values in nominal range, submit?'
