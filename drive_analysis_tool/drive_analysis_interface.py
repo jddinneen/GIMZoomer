@@ -53,16 +53,16 @@ class DriveAnalysisWidget(QWidget):
         super().__init__()
 
         self.setWindowTitle('Drive Analysis Tool')
-        # self.root_path = ''
+        self.root_path = ''
         # self.root_path = os.path.expanduser('~')
         # self.root_path = os.path.expanduser('~\\Downloads')
-        self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'desjardins'))
-        # self.root_path_2 = ''
-        self.root_path_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'academic'))
-        # self.root_path_3 = ''
-        self.root_path_3 = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer'))
-        # self.root_path_4 = ''
-        self.root_path_4 = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', '2017 Fall'))
+        # self.root_path = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'desjardins'))
+        self.root_path_2 = ''
+        # self.root_path_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'academic'))
+        self.root_path_3 = ''
+        # self.root_path_3 = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer'))
+        self.root_path_4 = ''
+        # self.root_path_4 = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', '2017 Fall'))
         self.dbx_json_dirpath = '/'
         self.threadpool = QThreadPool()
         self.expanded_items_list = []
@@ -122,19 +122,19 @@ class DriveAnalysisWidget(QWidget):
         self.anon_tree_4 = QTreeView()
         self.anon_model_4 = QStandardItemModel()
 
-        select_btn = QPushButton('Select Folder', self)
+        select_btn = QPushButton('Select Root', self)
         select_btn.setToolTip('Select <b>personal folder</b> for data collection.')
         select_btn.clicked.connect(self.show_file_dialog)
         select_btn.resize(select_btn.sizeHint())
-        select_btn_2 = QPushButton('Select Folder', self)
+        select_btn_2 = QPushButton('Select Root', self)
         select_btn_2.setToolTip('Select <b>second personal folder (if any)</b> for data collection.')
         select_btn_2.clicked.connect(self.show_file_dialog_2)
         select_btn_2.resize(select_btn_2.sizeHint())
-        select_btn_3 = QPushButton('Select Folder', self)
+        select_btn_3 = QPushButton('Select Root', self)
         select_btn_3.setToolTip('Select <b>third personal folder (if any)</b> for data collection.')
         select_btn_3.clicked.connect(self.show_file_dialog_3)
         select_btn_3.resize(select_btn_3.sizeHint())
-        select_btn_4 = QPushButton('Select Folder', self)
+        select_btn_4 = QPushButton('Select Root', self)
         select_btn_4.setToolTip('Select <b>fourth personal folder (if any)</b> for data collection.')
         select_btn_4.clicked.connect(self.show_file_dialog_4)
         select_btn_4.resize(select_btn_4.sizeHint())
@@ -344,7 +344,8 @@ class DriveAnalysisWidget(QWidget):
         self.anon_tree_4.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.anon_tree_4.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
-        self.build_tree_structure_threaded(self.root_path)
+        if self.root_path != '':
+            self.build_tree_structure_threaded(self.root_path)
         if self.root_path_2 != '':
             self.build_tree_structure_threaded_2(self.root_path_2)
         if self.root_path_3 != '':
@@ -742,10 +743,22 @@ class DriveAnalysisWidget(QWidget):
 
     def preview_anon_tree_threaded(self):
         if self.root_path != '':
-            worker = Worker(self.preview_anon_tree)
-            worker.signals.started.connect(self.preview_anon_tree_started)
-            worker.signals.result.connect(self.preview_anon_tree_finished)
-            self.threadpool.start(worker)
+            if len(self.unchecked_items_set) == len(self.og_dir_dict.keys()):
+                self.anon_model.removeRow(0)
+                for row in range(22):
+                    label_key = self.user_folder_props_table.item(row, 1).data(Qt.UserRole)
+                    value_item = QTableWidgetItem('?')
+                    value_item.setData(Qt.UserRole, label_key)
+                    value_item.setTextAlignment(Qt.AlignRight)
+                    value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    self.user_folder_props_table.setItem(row, 1, value_item)
+                self.dir_error.about(self, 'Error', 'No folder selected, <b>click \'Clear Selection\'</b> to '
+                                                    'exclude folder from submission.')
+            else:
+                worker = Worker(self.preview_anon_tree)
+                worker.signals.started.connect(self.preview_anon_tree_started)
+                worker.signals.result.connect(self.preview_anon_tree_finished)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -771,10 +784,22 @@ class DriveAnalysisWidget(QWidget):
 
     def preview_anon_tree_threaded_2(self):
         if self.root_path_2 != '':
-            worker = Worker(self.preview_anon_tree_2)
-            worker.signals.started.connect(self.preview_anon_tree_started_2)
-            worker.signals.result.connect(self.preview_anon_tree_finished_2)
-            self.threadpool.start(worker)
+            if len(self.unchecked_items_set_2) == len(self.og_dir_dict_2.keys()):
+                self.anon_model_2.removeRow(0)
+                for row in range(22):
+                    label_key = self.user_folder_props_table.item(row, 1).data(Qt.UserRole)
+                    value_item = QTableWidgetItem('?')
+                    value_item.setData(Qt.UserRole, label_key)
+                    value_item.setTextAlignment(Qt.AlignRight)
+                    value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    self.user_folder_props_table.setItem(row, 1, value_item)
+                self.dir_error.about(self, 'Error', 'No folder selected, <b>click \'Clear Selection\'</b> to '
+                                                    'exclude folder from submission.')
+            else:
+                worker = Worker(self.preview_anon_tree_2)
+                worker.signals.started.connect(self.preview_anon_tree_started_2)
+                worker.signals.result.connect(self.preview_anon_tree_finished_2)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -800,10 +825,22 @@ class DriveAnalysisWidget(QWidget):
 
     def preview_anon_tree_threaded_3(self):
         if self.root_path_3 != '':
-            worker = Worker(self.preview_anon_tree_3)
-            worker.signals.started.connect(self.preview_anon_tree_started_3)
-            worker.signals.result.connect(self.preview_anon_tree_finished_3)
-            self.threadpool.start(worker)
+            if len(self.unchecked_items_set_3) == len(self.og_dir_dict_3.keys()):
+                self.anon_model_3.removeRow(0)
+                for row in range(22):
+                    label_key = self.user_folder_props_table.item(row, 1).data(Qt.UserRole)
+                    value_item = QTableWidgetItem('?')
+                    value_item.setData(Qt.UserRole, label_key)
+                    value_item.setTextAlignment(Qt.AlignRight)
+                    value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    self.user_folder_props_table.setItem(row, 1, value_item)
+                self.dir_error.about(self, 'Error', 'No folder selected, <b>click \'Clear Selection\'</b> to '
+                                                    'exclude folder from submission.')
+            else:
+                worker = Worker(self.preview_anon_tree_3)
+                worker.signals.started.connect(self.preview_anon_tree_started_3)
+                worker.signals.result.connect(self.preview_anon_tree_finished_3)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -829,10 +866,22 @@ class DriveAnalysisWidget(QWidget):
 
     def preview_anon_tree_threaded_4(self):
         if self.root_path_4 != '':
-            worker = Worker(self.preview_anon_tree_4)
-            worker.signals.started.connect(self.preview_anon_tree_started_4)
-            worker.signals.result.connect(self.preview_anon_tree_finished_4)
-            self.threadpool.start(worker)
+            if len(self.unchecked_items_set_4) == len(self.og_dir_dict_4.keys()):
+                self.anon_model_4.removeRow(0)
+                for row in range(22):
+                    label_key = self.user_folder_props_table.item(row, 1).data(Qt.UserRole)
+                    value_item = QTableWidgetItem('?')
+                    value_item.setData(Qt.UserRole, label_key)
+                    value_item.setTextAlignment(Qt.AlignRight)
+                    value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                    self.user_folder_props_table.setItem(row, 1, value_item)
+                self.dir_error.about(self, 'Error', 'No folder selected, <b>click \'Clear Selection\'</b> to '
+                                                    'exclude folder from submission.')
+            else:
+                worker = Worker(self.preview_anon_tree_4)
+                worker.signals.started.connect(self.preview_anon_tree_started_4)
+                worker.signals.result.connect(self.preview_anon_tree_finished_4)
+                self.threadpool.start(worker)
         else:
             pass
 
@@ -846,13 +895,13 @@ class DriveAnalysisWidget(QWidget):
     def display_user_folder_props(self):
         try:
             anon_dir_dict_list = []
-            if self.root_path != '':
+            if self.root_path != '' and len(self.unchecked_items_set) != len(self.og_dir_dict.keys()):
                 anon_dir_dict_list.append(self.anon_dir_dict)
-            if self.root_path_2 != '':
+            if self.root_path_2 != '' and len(self.unchecked_items_set_2) != len(self.og_dir_dict_2.keys()):
                 anon_dir_dict_list.append(self.anon_dir_dict_2)
-            if self.root_path_3 != '':
+            if self.root_path_3 != '' and len(self.unchecked_items_set_3) != len(self.og_dir_dict_3.keys()):
                 anon_dir_dict_list.append(self.anon_dir_dict_3)
-            if self.root_path_4 != '':
+            if self.root_path_4 != '' and len(self.unchecked_items_set_4) != len(self.og_dir_dict_4.keys()):
                 anon_dir_dict_list.append(self.anon_dir_dict_4)
             self.user_folder_props = drive_measurement(anon_dir_dict_list)
             self.user_folder_typical = check_collection_properties(self.user_folder_props)
@@ -866,8 +915,18 @@ class DriveAnalysisWidget(QWidget):
             self.user_folder_props_table.reset()
         except Exception as e:
             print(e)
+            self.dir_error.about(self, 'Error', 'Incapable of computing statistics with current '
+                                                'root and/or folder selections: ' + str(e) + '<br><br>' +
+                                                '<b>Please modify root and/or folder selections.</b>')
             self.user_folder_typical = False
-        # self.user_folder_typical = True  # for testing upload, comment out if not testing
+            for row in range(22):
+                label_key = self.user_folder_props_table.item(row, 1).data(Qt.UserRole)
+                value_item = QTableWidgetItem('?')
+                value_item.setData(Qt.UserRole, label_key)
+                value_item.setTextAlignment(Qt.AlignRight)
+                value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                self.user_folder_props_table.setItem(row, 1, value_item)
+        self.user_folder_typical = True  # for testing upload, comment out if not testing
         if self.user_folder_typical:
             self.submit_btn.setEnabled(True)
             is_typical_str = 'Values in nominal range, submit?'
@@ -889,6 +948,9 @@ class DriveAnalysisWidget(QWidget):
             elif root1 in root2.parents or root1 in root3.parents or root1 in root4.parents:
                 self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
                                                     'Root Folder 1 is a parent directory of another root folder.')
+            elif root1 == root2 or root1 == root3 or root1 == root4:
+                self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
+                                                    'Root Folder 1 has already been selected in another tab.')
             else:
                 self.root_path = os.path.abspath(dirpath)
                 self.folder_edit.setText(self.root_path)
@@ -907,6 +969,9 @@ class DriveAnalysisWidget(QWidget):
             elif root2 in root1.parents or root2 in root3.parents or root2 in root4.parents:
                 self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
                                                     'Root Folder 2 is a parent directory another root folder.')
+            elif root2 == root1 or root2 == root3 or root2 == root4:
+                self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
+                                                    'Root Folder 2 has already been selected in another tab.')
             else:
                 self.root_path_2 = os.path.abspath(dirpath)
                 self.folder_edit_2.setText(self.root_path_2)
@@ -925,6 +990,9 @@ class DriveAnalysisWidget(QWidget):
             elif root3 in root1.parents or root3 in root2.parents or root3 in root4.parents:
                 self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
                                                     'Root Folder 3 is a parent directory of another root folder.')
+            elif root3 == root1 or root3 == root2 or root3 == root4:
+                self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
+                                                    'Root Folder 3 has already been selected in another tab.')
             else:
                 self.root_path_3 = os.path.abspath(dirpath)
                 self.folder_edit_3.setText(self.root_path_3)
@@ -943,6 +1011,9 @@ class DriveAnalysisWidget(QWidget):
             elif root4 in root1.parents or root4 in root2.parents or root4 in root3.parents:
                 self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
                                                     'Root Folder 4 is a parent directory of another root folder.')
+            elif root4 == root1 or root4 == root2 or root4 == root3:
+                self.dir_error.about(self, 'Error', 'Unable to select directory.\n'
+                                                    'Root Folder 4 has already been selected in another tab.')
             else:
                 self.root_path_4 = os.path.abspath(dirpath)
                 self.folder_edit_4.setText(self.root_path_4)
@@ -998,19 +1069,19 @@ class DriveAnalysisWidget(QWidget):
     def upload_collected_data(self):
         # ATTENTION: For large files, this needs have its own separate thread
         data_list = []
-        if self.root_path != '':
+        if self.root_path != '' and len(self.unchecked_items_set) != len(self.og_dir_dict.keys()):
             data_1 = bytes(json.dumps(self.anon_dir_dict), 'utf8')
             data_1 = compress_data(data_1)
             data_list.append(data_1)
-        if self.root_path_2 != '':
+        if self.root_path_2 != '' and len(self.unchecked_items_set_2) != len(self.og_dir_dict_2.keys()):
             data_2 = bytes(json.dumps(self.anon_dir_dict_2), 'utf8')
             data_2 = compress_data(data_2)
             data_list.append(data_2)
-        if self.root_path_3 != '':
+        if self.root_path_3 != '' and len(self.unchecked_items_set_3) != len(self.og_dir_dict_3.keys()):
             data_3 = bytes(json.dumps(self.anon_dir_dict_3), 'utf8')
             data_3 = compress_data(data_3)
             data_list.append(data_3)
-        if self.root_path_4 != '':
+        if self.root_path_4 != ''  and len(self.unchecked_items_set_4) != len(self.og_dir_dict_4.keys()):
             data_4 = bytes(json.dumps(self.anon_dir_dict_4), 'utf8')
             data_4 = compress_data(data_4)
             data_list.append(data_4)

@@ -69,11 +69,11 @@ if __name__ == '__main__':
 
     print('')
     test_json_filepath_1 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                           'F54wL3HMJCBgxLsQ_20190108_090412_dir_dict_1.enc'))
+                                                           'ZrhSRNNdqrlHZWv1_20190108_102814_dir_dict_1.enc'))
     test_json_filepath_2 = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                           'F54wL3HMJCBgxLsQ_20190108_090412_dir_dict_2.enc'))
+                                                           'ZrhSRNNdqrlHZWv1_20190108_102814_dir_dict_2.enc'))
     test_jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool',
-                                                            'F54wL3HMJCBgxLsQ_20190108_090412_sym_key.enc'))
+                                                            'ZrhSRNNdqrlHZWv1_20190108_102814_sym_key.enc'))
     test_dir_dict_1 = decrypt_data(test_json_filepath_1, test_jsonkey_filepath, test_private_key_filepath)
     print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[1]])
     print(test_dir_dict_1[sorted(test_dir_dict_1.keys())[2]])
