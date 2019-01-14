@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from PyQt5.QtWidgets import QWidget, QPushButton, QApplication, QFileDialog, QSlider, QGridLayout, QLabel, \
     QTreeView, QAbstractItemView, QHeaderView, QCheckBox, QTreeWidget, QTreeWidgetItem, QTextBrowser, \
-    QTableWidget, QTableWidgetItem, QTabWidget, QMessageBox, QErrorMessage
+    QTableWidget, QTableWidgetItem, QTabWidget, QMessageBox, QErrorMessage, QSplitter, QHBoxLayout, QVBoxLayout, QFrame
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QObject, QRunnable, QThreadPool, QVariant, QItemSelectionModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from copy import deepcopy
@@ -435,24 +435,48 @@ class DriveAnalysisWidget(QWidget):
         self.tab4.layout.addWidget(preview_btn_4, 3, 7, 1, 1)
         self.tab4.setLayout(self.tab4.layout)
 
-        grid = QGridLayout()
-        # grid.addWidget(select_btn, 0, 0, 1, 1)
-        # grid.addWidget(self.folder_edit, 0, 1, 1, 7)
-        # grid.addWidget(self.status_label, 1, 0, 1, 8)
-        # grid.addWidget(og_tree_label, 1, 0, 1, 5)
-        # grid.addWidget(anon_tree_label, 1, 5, 1, 3)
-        # grid.addWidget(self.og_tree, 2, 0, 1, 5)
-        # grid.addWidget(self.anon_tree, 2, 5, 1, 3)
-        grid.addWidget(self.user_folder_props_label, 3, 0, 1, 8)
-        grid.addWidget(self.user_folder_props_table, 4, 0, 2, 8)
-        # grid.addWidget(self.user_folder_typical_label, 7, 0, 1, 6)
-        grid.addWidget(self.status_label, 7, 0, 1, 6)
-        # grid.addWidget(preview_btn, 7, 6, 1, 1)
-        grid.addWidget(self.submit_btn, 7, 6, 1, 1)
-        grid.addWidget(self.override_btn, 7, 7, 1, 1)
-        grid.addWidget(self.tabs, 0, 0, 1, 8)
+        # grid = QGridLayout()
+        # # grid.addWidget(select_btn, 0, 0, 1, 1)
+        # # grid.addWidget(self.folder_edit, 0, 1, 1, 7)
+        # # grid.addWidget(self.status_label, 1, 0, 1, 8)
+        # # grid.addWidget(og_tree_label, 1, 0, 1, 5)
+        # # grid.addWidget(anon_tree_label, 1, 5, 1, 3)
+        # # grid.addWidget(self.og_tree, 2, 0, 1, 5)
+        # # grid.addWidget(self.anon_tree, 2, 5, 1, 3)
+        # grid.addWidget(self.user_folder_props_label, 3, 0, 1, 8)
+        # grid.addWidget(self.user_folder_props_table, 4, 0, 2, 8)
+        # # grid.addWidget(self.user_folder_typical_label, 7, 0, 1, 6)
+        # grid.addWidget(self.status_label, 7, 0, 1, 6)
+        # # grid.addWidget(preview_btn, 7, 6, 1, 1)
+        # grid.addWidget(self.submit_btn, 7, 6, 1, 1)
+        # grid.addWidget(self.override_btn, 7, 7, 1, 1)
+        # grid.addWidget(self.tabs, 0, 0, 1, 8)
 
-        self.setLayout(grid)
+        bottom_hbox = QGridLayout()
+        bottom_hbox.addWidget(self.status_label, 0, 0, 1, 6)
+        bottom_hbox.addWidget(self.submit_btn, 0, 6, 1, 1)
+        bottom_hbox.addWidget(self.override_btn, 0, 7, 1, 1)
+        bottom_grid = QVBoxLayout()
+        bottom_grid.addWidget(self.user_folder_props_label)
+        bottom_grid.addWidget(self.user_folder_props_table)
+        bottom_grid.addLayout(bottom_hbox)
+
+        bottom_grid_widget = QWidget()
+        bottom_grid_widget.setLayout(bottom_grid)
+        splitter = QSplitter(Qt.Vertical)
+        # line = QFrame(splitter.handle(1))
+        # line.setFrameShape(QFrame.HLine)
+        # line.setFrameShadow(QFrame.Sunken)
+        splitter.addWidget(self.tabs)
+        splitter.addWidget(bottom_grid_widget)
+        splitter.handle(1).setStyleSheet('background-color: #777777')
+        splitter.setHandleWidth(10)
+
+        # self.setLayout(grid)
+        vbox = QVBoxLayout(self)
+        # vbox.addWidget(line)
+        vbox.addWidget(splitter)
+        self.setLayout(vbox)
         self.resize(1280, 720)
         self.show()
 
