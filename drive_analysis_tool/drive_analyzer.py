@@ -1,19 +1,22 @@
 import os
+import sys
+import ctypes
 import statistics
 import pickle
 from collections import Counter
 
 
 def record_stat(root):
-    # Do a walk from the root folder and collect statistics of all the files within each subfolder.
-    # For the sake of anonymity, file names are not stored.
-    # Folder names are stored but users can opt out and choose alternative names.
-    # Folders can be excluded from the tree.
+    """ Do a walk from the root folder and collect statistics of all the files
+    within each subfolder. For the sake of anonymity, file names are not
+    stored. Folder names are stored but users can opt out and choose
+    alternative names. Folders can be excluded from the tree. """
     dir_dict = dict()
     order_dict = dict()
-    dirorder = 1  # key starts as 1 since 0 can be interpreted as a boolean False
+    dirorder = 1  # key starts at 1 as 0 can be interpreted as boolean False
     hidden_dirs = []
-    for dirpath, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
+    for dirpath, dirnames, filenames in os.walk(
+            root, topdown=True, followlinks=False):
         invalid_dirs = []
         for dir_ in dirnames:
             try:
@@ -21,11 +24,14 @@ def record_stat(root):
             except PermissionError:
                 invalid_dirs.append(dir_)
         dirnames = list(set(dirnames).difference(set(invalid_dirs)))
-        hidden_dirs += [os.path.join(dirpath, dir_) for dir_ in dirnames if dir_[0] == '.']
-        dirnames[:] = [dir_ for dir_ in dirnames if dir_[0] != '.']
-        filenames[:] = [file for file in filenames if file[0] != '.']
+        hidden_dirs += [os.path.join(dirpath, dir_) for dir_ in dirnames
+                        if is_hidden_item(dirpath, dir_)]
+        dirnames[:] = [dir_ for dir_ in dirnames
+                       if not is_hidden_item(dirpath, dir_)]
+        filenames[:] = [file for file in filenames
+                        if not is_hidden_item(dirpath, file)]
         if dirorder == 1:
-            dirparent = False  # signifies node as top-level, so it has no parent
+            dirparent = False  # marks node as top-level, so it has no parent
         else:
             dirparent = os.path.split(dirpath)[0]
         filestat_list = []
@@ -48,8 +54,9 @@ def record_stat(root):
                                           'size': f_stat.st_size,
                                           'atime': f_stat.st_atime,
                                           'mtime': f_stat.st_mtime,
-                                          'ctime': f_stat.st_ctime})
-                                          # 'file_attributes': f_stat.st_file_attributes})
+                                          'ctime': f_stat.st_ctime
+                                          # 'file_attributes': f_stat.st_file_attributes
+                                          })
                 except OSError:
                     pass
         dir_dict[dirorder] = {'dirname': os.path.split(dirpath)[1],  # directory name [0]
@@ -87,6 +94,28 @@ def record_stat(root):
     # print('\n')
     assign_folder_depth(1, dir_dict)
     return dir_dict
+
+
+def is_hidden_item(root, f):
+    """ checks to see if file or folder is hidden (OS-sensitive)
+    https://github.com/jddinneen/cardinal/blob/master/src/walk.py """
+    if sys.platform in ['Windows',  'win32']:
+        try:
+            full_path = os.path.join(root, f)
+            attrs = ctypes.windll.kernel32.GetFileAttributesW(full_path)
+            assert attrs != -1
+            result = bool(attrs & 2)
+        except (AttributeError, AssertionError):
+            result = False
+        return result
+    else:
+        # POSIX style hidden files.
+        # TODO: add provision for mac 'hidden' flag as users can manually
+        # hide folders using this mac-specific flag.
+        if str(f).startswith('.'):
+            return True
+        else:
+            return False
 
 
 def assign_folder_depth(dirkey, dir_dict):
@@ -157,7 +186,21 @@ def anonymize_stat(dir_dict, removed_dirs, renamed_dirs=None):
     return dir_dict
 
 
-def drive_measurement(dir_dict_list):
+def errant_mean(iterable):
+    try:
+        return statistics.mean(iterable)
+    except statistics.StatisticsError:
+        return None
+
+
+def errant_mode(iterable):
+    try:
+        return statistics.mode(iterable)
+    except statistics.StatisticsError:
+        return None
+
+
+def drive_measurement(dir_dict_list, allow_stat_error=False):
     # breadth_counts = []
     leaf_folder_depths = []
     switch_folder_depths = []
@@ -165,6 +208,13 @@ def drive_measurement(dir_dict_list):
     n_file_counts = []
     folder_depths = []
     file_depths = []
+
+    if allow_stat_error:
+        mean_func = errant_mean
+        mode_func = errant_mode
+    else:
+        mean_func = statistics.mean
+        mode_func = statistics.mode
 
     n_roots = len(dir_dict_list)  # number of roots
     n_files = 0
@@ -211,21 +261,21 @@ def drive_measurement(dir_dict_list):
                     file_depths.append(dir_dict[key]['depth'])
 
     # breadth_max = max(breadth_counts)
-    # breadth_mean = statistics.mean(breadth_counts)
+    # breadth_mean = mean_func(breadth_counts)
     breadth_max = Counter(folder_depths).most_common(1)[0][1]
-    breadth_mean = statistics.mean(Counter(folder_depths).values())
+    breadth_mean = mean_func(Counter(folder_depths).values())
     pct_leaf_folders = n_leaf_folders / n_folders * 100
-    depth_leaf_folders_mean = statistics.mean(leaf_folder_depths)
+    depth_leaf_folders_mean = mean_func(leaf_folder_depths)
     pct_switch_folders = n_switch_folders / n_folders * 100
-    depth_switch_folders_mean = statistics.mean(switch_folder_depths)
+    depth_switch_folders_mean = mean_func(switch_folder_depths)
     depth_max = max(folder_depths)
-    depth_folders_mode = statistics.mode(folder_depths)
-    depth_folders_mean = statistics.mean(folder_depths)
-    branching_factor = statistics.mean(branching_n_folder_counts)
-    n_files_mean = statistics.mean(n_file_counts)
+    depth_folders_mode = mode_func(folder_depths)
+    depth_folders_mean = mean_func(folder_depths)
+    branching_factor = mean_func(branching_n_folder_counts)
+    n_files_mean = mean_func(n_file_counts)
     pct_empty_folders = n_empty_folders / n_folders * 100
-    depth_files_mean = statistics.mean(file_depths)
-    depth_files_mode = statistics.mode(file_depths)
+    depth_files_mean = mean_func(file_depths)
+    depth_files_mode = mode_func(file_depths)
 
     for key in dir_dict.keys():
         if dir_dict[key]['depth'] == depth_files_mode:
@@ -270,16 +320,20 @@ def check_collection_properties(properties):
                       'depth_files_mean': [5, 8],
                       'depth_files_mode': [4, 4],
                       'file_breadth_mode_n_files': [9892, 52230]}
-    is_typical_list = dict(zip(labels, [True]*len(labels)))
-    diff_list = dict(zip(labels, [None]*len(labels)))
+    is_typical_dict = dict(zip(labels, [True]*len(labels)))
+    diff_dict = dict(zip(labels, [None]*len(labels)))
     for label in labels:
-        if properties[label] < typical_ranges[label][0]:
-            is_typical_list[label] = False
-            diff_list[label] = abs(properties[label] - typical_ranges[label][0])
-        elif properties[label] > typical_ranges[label][1]:
-            is_typical_list[label] = False
-            diff_list[label] = abs(properties[label] - typical_ranges[label][1])
-    return all(is_typical_list.values()), typical_ranges, diff_list
+        if properties[label] is not None:
+            if properties[label] < typical_ranges[label][0]:
+                is_typical_dict[label] = False
+                diff_dict[label] = properties[label] - typical_ranges[label][0]
+            elif properties[label] > typical_ranges[label][1]:
+                is_typical_dict[label] = False
+                diff_dict[label] = properties[label] - typical_ranges[label][1]
+        else:
+            diff_dict[label] = None
+        # print(label, properties[label], diff_dict[label])
+    return all(is_typical_dict.values()), typical_ranges, diff_dict
 
 
 if __name__ == "__main__":
