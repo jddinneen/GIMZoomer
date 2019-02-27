@@ -28,7 +28,7 @@ dbx_token_path = Path(
     '~/Dropbox/mcgill/File Zoomer/dbx_access_token.txt').expanduser()
 with open(dbx_token_path) as f:
     dbx_access_token = f.read()
-# When compiling program to send out to others, past token string below
+# When compiling program to send out to others, paste token string below
 # instead of opening the file. Not really secure but meh.
 # dbx_access_token = ''
 
