@@ -3,6 +3,7 @@ import sys
 import ctypes
 import statistics
 import pickle
+from pathlib import Path
 from collections import Counter
 
 
@@ -10,7 +11,17 @@ def record_stat(root):
     """ Do a walk from the root folder and collect statistics of all the files
     within each subfolder. For the sake of anonymity, file names are not
     stored. Folder names are stored but users can opt out and choose
-    alternative names. Folders can be excluded from the tree. """
+    alternative names. Folders can be excluded from the tree.
+
+    dirname: directory name
+    dirparent: parent key
+    childkeys: children keys
+    depth: current folder's depth
+    nfiles: number of files found in directory
+    cumfiles: cumulative count of accessible files
+    filestat: statistics for each file in the folder
+    aggfilestat: aggregated statistics for a folder's files
+    """
     dir_dict = dict()
     order_dict = dict()
     dirorder = 1  # key starts at 1 as 0 can be interpreted as boolean False
@@ -40,47 +51,40 @@ def record_stat(root):
             if os.access(f_path, os.R_OK):
                 try:
                     f_stat = os.stat(f_path)
-                    # [f_stat.st_mode, f_stat.st_ino,
-                    #  f_stat.st_dev, f_stat.st_nlink, f_stat.st_uid, f_stat.st_gid, f_stat.st_size,
-                    #  f_stat.st_atime, f_stat.st_mtime, f_stat.st_ctime,
-                    #  f_stat.st_atime_ns, f_stat.st_mtime_ns, f_stat.st_ctime_ns,
-                    #  f_stat.st_file_attributes]
-                    filestat_list.append({'mode': f_stat.st_mode,
-                                          'ino': f_stat.st_ino,
-                                          'dev': f_stat.st_dev,
-                                          'nlink': f_stat.st_nlink,
-                                          'uid': f_stat.st_uid,
-                                          'gid': f_stat.st_gid,
-                                          'size': f_stat.st_size,
-                                          'atime': f_stat.st_atime,
-                                          'mtime': f_stat.st_mtime,
-                                          'ctime': f_stat.st_ctime
-                                          # 'file_attributes': f_stat.st_file_attributes
-                                          })
+                    filestat_list.append({
+                        'mode': f_stat.st_mode,
+                        'ino': f_stat.st_ino,
+                        'dev': f_stat.st_dev,
+                        'nlink': f_stat.st_nlink,
+                        'uid': f_stat.st_uid,
+                        'gid': f_stat.st_gid,
+                        'size': f_stat.st_size,
+                        'atime': f_stat.st_atime,
+                        'mtime': f_stat.st_mtime,
+                        'ctime': f_stat.st_ctime
+                    })
                 except OSError:
                     pass
-        dir_dict[dirorder] = {'dirname': os.path.split(dirpath)[1],  # directory name [0]
-                              'dirparent': dirparent,  # parent key [1]
-                              'childkeys': [os.path.join(dirpath, dir_) for dir_ in dirnames],  # children keys [2]
-                              'depth': 0,  # current folder's depth
-                              # 'files': filenames,  # names of files found in directory [3]
-                              'nfiles': len(filenames),  # number of files found in directory [3]
-                              'cumfiles': len(filenames),  # cumulative count of accessible files [4]
-                              # 'filestat':  {f_: os.stat(os.path.join(dirpath, f_)) for f_ in filenames},
-                              # 'filestat': [os.stat(os.path.join(dirpath, f_)) for f_ in filenames],
-                              # statistics for each file in the folder [5]
-                              'filestat': filestat_list,  # statistics for each file in the folder [5]
-                              'aggfilestat': None}  # aggregated statistics for a folder's files [6]
+        dir_dict[dirorder] = {
+            'dirname': os.path.split(dirpath)[1],
+            'dirparent': dirparent,
+            'childkeys': [os.path.join(dirpath, dir_) for dir_ in dirnames],
+            'depth': 0,
+            'nfiles': len(filenames),
+            'cumfiles': len(filenames),
+            'filestat': filestat_list,
+            'aggfilestat': None
+        }
         order_dict[dirpath] = dirorder
         dirorder += 1
 
     # Refer to each node using a unique key instead of dirpath
     for dirkey in sorted(dir_dict.keys()):
         if dirkey > 1:
-            # dir_dict[dirkey][1] = order_dict[dir_dict[dirkey][1]]
-            dir_dict[dirkey]['dirparent'] = order_dict[dir_dict[dirkey]['dirparent']]
-        # dir_dict[dirkey][2] = [order_dict[child] for child in dir_dict[dirkey][2]]
-        dir_dict[dirkey]['childkeys'] = [order_dict[child] for child in dir_dict[dirkey]['childkeys']]
+            dir_dict[dirkey]['dirparent'] = order_dict[
+                dir_dict[dirkey]['dirparent']]
+        dir_dict[dirkey]['childkeys'] = [
+            order_dict[child] for child in dir_dict[dirkey]['childkeys']]
 
     # Remove hidden dirs and their children
     hidden_dirs = [order_dict[dirpath] for dirpath in hidden_dirs]
@@ -90,8 +94,6 @@ def record_stat(root):
     for dirkey in hidden_dirs:
         dir_dict.pop(dirkey)
 
-    # print_tree(root, dir_dict)
-    # print('\n')
     assign_folder_depth(1, dir_dict)
     return dir_dict
 
@@ -120,25 +122,21 @@ def is_hidden_item(root, f):
 
 def assign_folder_depth(dirkey, dir_dict):
     if dir_dict[dirkey]['dirparent']:
-        dir_dict[dirkey]['depth'] = dir_dict[dir_dict[dirkey]['dirparent']]['depth'] + 1
+        dir_dict[dirkey]['depth'] = dir_dict[
+            dir_dict[dirkey]['dirparent']]['depth'] + 1
     for child in dir_dict[dirkey]['childkeys']:
         assign_folder_depth(child, dir_dict)
 
 
 def compute_stat(dir_dict):
-    # Count cumulative accessible files
+    """ Count cumulative accessible files """
     for dirkey in sorted(dir_dict.keys(), reverse=True):
-        # children = dir_dict[dirkey][2]
-        # dir_dict[dirkey][4] += sum([dir_dict[child][4] for child in children])
         children = dir_dict[dirkey]['childkeys']
-        dir_dict[dirkey]['cumfiles'] += sum([dir_dict[child]['cumfiles'] for child in children])
+        dir_dict[dirkey]['cumfiles'] += sum(
+            [dir_dict[child]['cumfiles'] for child in children])
         all_atime = []
         all_mtime = []
         all_ctime = []
-        # for f_ in dir_dict[dirkey]['files']:
-        #     all_st_atime.append(dir_dict[dirkey]['filestat'][f_].st_atime)
-        #     all_st_mtime.append(dir_dict[dirkey]['filestat'][f_].st_mtime)
-        #     all_st_ctime.append(dir_dict[dirkey]['filestat'][f_].st_ctime)
         for stat_ in dir_dict[dirkey]['filestat']:
             all_atime.append(stat_['atime'])
             all_mtime.append(stat_['mtime'])
@@ -162,6 +160,7 @@ def compute_stat(dir_dict):
 
 
 def find_all_children(dirkey, dir_dict):
+    """ Find all children of a given directory. """
     children = []
     for child in dir_dict[dirkey]['childkeys']:
         children.extend(find_all_children(child, dir_dict))
@@ -170,8 +169,9 @@ def find_all_children(dirkey, dir_dict):
 
 
 def anonymize_stat(dir_dict, removed_dirs, renamed_dirs=None):
-    # Anonymize dir_dict by removing some dirs and renaming some dirs.
-    # If a directory is removed, remove its children and remove its parent's reference to it.
+    """ Anonymize dir_dict by removing some dirs and renaming some dirs.
+    If a directory is removed, remove its children and remove its parent's
+    reference to it. """
     if renamed_dirs is not None:
         for dirkey in renamed_dirs.keys():
             dir_dict[dirkey]['dirname'] = renamed_dirs[dirkey]
@@ -180,13 +180,16 @@ def anonymize_stat(dir_dict, removed_dirs, renamed_dirs=None):
         if parent in dir_dict.keys():
             og_childset = set(dir_dict[parent]['childkeys'])
             rm_childset = set([dirkey])
-            dir_dict[parent]['childkeys'] = list(og_childset.difference(rm_childset))
-            # dir_dict[parent]['childkeys'] = list(set(dir_dict[parent]['childkeys']).difference(set([dirkey])))
+            dir_dict[parent]['childkeys'] = list(
+                og_childset.difference(rm_childset))
         dir_dict.pop(dirkey)
     return dir_dict
 
 
 def errant_mean(iterable):
+    """ When calculating mean, return None if StatisticsError is raised.
+    This prevents the program from stopping when a user has a file structure
+    that results in invalid means, such as mean() of an empty list. """
     try:
         return statistics.mean(iterable)
     except statistics.StatisticsError:
@@ -194,6 +197,10 @@ def errant_mean(iterable):
 
 
 def errant_mode(iterable):
+    """ When calculating mode, return None if StatisticsError is raised.
+    This prevents the program from stopping when a user has a file structure
+    that results in invalid modes, such as modes of lists containing equally
+    common value, e.g., mode([1, 1, 2, 2]). """
     try:
         return statistics.mode(iterable)
     except statistics.StatisticsError:
@@ -201,7 +208,25 @@ def errant_mode(iterable):
 
 
 def drive_measurement(dir_dict_list, allow_stat_error=False):
-    # breadth_counts = []
+    """ Compute statistics of interest (properties) given the collected
+    statistics of a root folder(s).
+
+    Parameters
+    __________
+    dir_dict_list: list
+        List containing one or more dir_dict generated from record_stat.
+        If more than one dir_dict is passed, statistics are calculated in
+        aggregate.
+    allow_stat_error: bool, default False
+         If statistics errors are allowed, mean and mode calculations return
+         None instead of an error. See docstring on errant_mean and errant_mode
+         for use cases permitting statistics errors.
+
+    Returns
+    _______
+    properties: dict
+        Dictionary containing root properties and their respective values.
+    """
     leaf_folder_depths = []
     switch_folder_depths = []
     branching_n_folder_counts = []
@@ -219,31 +244,17 @@ def drive_measurement(dir_dict_list, allow_stat_error=False):
     n_roots = len(dir_dict_list)  # number of roots
     n_files = 0
     n_folders = sum([len(dir_dict.keys()) for dir_dict in dir_dict_list])
-    # breadth_max = 0
-    # breadth_mean = 0
-    root_n_folders = sum([len(dir_dict[1]['childkeys']) for dir_dict in dir_dict_list])
+    root_n_folders = sum(
+        [len(dir_dict[1]['childkeys']) for dir_dict in dir_dict_list])
     n_leaf_folders = 0
-    # pct_leaf_folders = 0
-    # depth_leaf_folders_mean = 0
     n_switch_folders = 0
-    # pct_switch_folders = 0
-    # depth_switch_folders_mean = 0
-    # depth_max = 0
-    # depth_folders_mode = 0
-    # depth_folders_mean = 0
-    # branching_factor = 0
     root_n_files = sum([dir_dict[1]['nfiles'] for dir_dict in dir_dict_list])
-    # n_files_mean = 0
     n_empty_folders = 0
-    # pct_empty_folders = 0
-    # depth_files_mean = 0
-    # depth_files_mode = 0
     file_breadth_mode_n_files = 0
     for dir_dict in dir_dict_list:
         for key in dir_dict.keys():
             n_files += dir_dict[key]['nfiles']
             n_file_counts.append(dir_dict[key]['nfiles'])
-            # breadth_counts.append(len(dir_dict[key]['childkeys']))
             folder_depths.append(dir_dict[key]['depth'])
             if len(dir_dict[key]['childkeys']) == 0:  # identifies leaf nodes
                 n_leaf_folders += 1
@@ -252,16 +263,16 @@ def drive_measurement(dir_dict_list, allow_stat_error=False):
                     n_empty_folders += 1
                 elif dir_dict[key]['nfiles'] > 0:
                     file_depths.append(dir_dict[key]['depth'])
-            elif len(dir_dict[key]['childkeys']) > 0:  # not switch but not leaf nodes
-                branching_n_folder_counts.append(len(dir_dict[key]['childkeys']))
+            elif len(dir_dict[key]['childkeys']) > 0:
+                # identifies branching nodes, superset of switch nodes
+                branching_n_folder_counts.append(
+                    len(dir_dict[key]['childkeys']))
                 if dir_dict[key]['nfiles'] == 0:  # identifies switch nodes
                     n_switch_folders += 1
                     switch_folder_depths.append(dir_dict[key]['depth'])
                 elif dir_dict[key]['nfiles'] > 0:
                     file_depths.append(dir_dict[key]['depth'])
 
-    # breadth_max = max(breadth_counts)
-    # breadth_mean = mean_func(breadth_counts)
     breadth_max = Counter(folder_depths).most_common(1)[0][1]
     breadth_mean = mean_func(Counter(folder_depths).values())
     pct_leaf_folders = n_leaf_folders / n_folders * 100
@@ -280,46 +291,77 @@ def drive_measurement(dir_dict_list, allow_stat_error=False):
     for key in dir_dict.keys():
         if dir_dict[key]['depth'] == depth_files_mode:
             file_breadth_mode_n_files += dir_dict[key]['nfiles']
-    labels = ['n_roots', 'n_files', 'n_folders', 'breadth_max', 'breadth_mean', 'root_n_folders', 'n_leaf_folders',
-              'pct_leaf_folders', 'depth_leaf_folders_mean', 'n_switch_folders', 'pct_switch_folders',
-              'depth_switch_folders_mean', 'depth_max', 'depth_folders_mode', 'depth_folders_mean',
-              'branching_factor', 'root_n_files', 'n_files_mean', 'n_empty_folders', 'pct_empty_folders',
-              'depth_files_mean', 'depth_files_mode', 'file_breadth_mode_n_files']
-    values = [n_roots, n_files, n_folders, breadth_max, breadth_mean, root_n_folders, n_leaf_folders, pct_leaf_folders,
-              depth_leaf_folders_mean, n_switch_folders, pct_switch_folders, depth_switch_folders_mean,
-              depth_max, depth_folders_mode, depth_folders_mean, branching_factor, root_n_files, n_files_mean,
-              n_empty_folders, pct_empty_folders, depth_files_mean, depth_files_mode, file_breadth_mode_n_files]
+    labels = ['n_roots', 'n_files', 'n_folders', 'breadth_max', 'breadth_mean',
+              'root_n_folders', 'n_leaf_folders', 'pct_leaf_folders',
+              'depth_leaf_folders_mean', 'n_switch_folders',
+              'pct_switch_folders', 'depth_switch_folders_mean', 'depth_max',
+              'depth_folders_mode', 'depth_folders_mean', 'branching_factor',
+              'root_n_files', 'n_files_mean', 'n_empty_folders',
+              'pct_empty_folders', 'depth_files_mean', 'depth_files_mode',
+              'file_breadth_mode_n_files']
+    values = [n_roots, n_files, n_folders, breadth_max, breadth_mean,
+              root_n_folders, n_leaf_folders, pct_leaf_folders,
+              depth_leaf_folders_mean, n_switch_folders, pct_switch_folders,
+              depth_switch_folders_mean, depth_max, depth_folders_mode,
+              depth_folders_mean, branching_factor, root_n_files, n_files_mean,
+              n_empty_folders, pct_empty_folders, depth_files_mean,
+              depth_files_mode, file_breadth_mode_n_files]
     return {label: value for label, value in zip(labels, values)}
 
 
 def check_collection_properties(properties):
-    labels = ['n_files', 'n_folders', 'breadth_max', 'breadth_mean', 'root_n_folders', 'n_leaf_folders',
-              'pct_leaf_folders', 'depth_leaf_folders_mean', 'n_switch_folders', 'pct_switch_folders',
-              'depth_switch_folders_mean', 'depth_max', 'depth_folders_mode', 'depth_folders_mean',
-              'branching_factor', 'root_n_files', 'n_files_mean', 'n_empty_folders', 'pct_empty_folders',
-              'depth_files_mean', 'depth_files_mode', 'file_breadth_mode_n_files']
-    typical_ranges = {'n_files': [29123, 193001],
-                      'n_folders': [3818, 26363],
-                      'breadth_max': [947, 4990],
-                      'breadth_mean': [290, 888],
-                      'root_n_folders': [15, 18],
-                      'n_leaf_folders': [2582, 18192],
-                      'pct_leaf_folders': [66, 80],
-                      'depth_leaf_folders_mean': [5.2, 8.8],
-                      'n_switch_folders': [591, 4291],
-                      'pct_switch_folders': [9, 23],
-                      'depth_switch_folders_mean': [4.75, 8.25],
-                      'depth_max': [12, 18],
-                      'depth_folders_mode': [5, 7],
-                      'depth_folders_mean': [6, 8],
-                      'branching_factor': [3, 4.5],
-                      'root_n_files': [properties['n_roots']*x for x in [4, 8]],
-                      'n_files_mean': [6, 8],
-                      'n_empty_folders': [304, 3057],
-                      'pct_empty_folders': [5, 12],
-                      'depth_files_mean': [5, 8],
-                      'depth_files_mode': [4, 4],
-                      'file_breadth_mode_n_files': [9892, 52230]}
+    """ Benchmark statistics computed using drive_measurement (root properties)
+    against typical value ranges. The 'typical' value ranges were determined
+    from an earlier study on personal folders (PIM: personal information
+    management).
+
+    Parameters
+    __________
+    properties: dict
+        Dictionary containing root properties and their respective values.
+        This dict is generated from drive_measurement.
+
+    Returns
+    _______
+    all(is_typical_dict.values()): bool
+        Boolean specifying if root properties fall within typical ranges
+    typical_ranges: dict
+        Typical ranges of personal folder (root) properties
+    diff_dict: dict
+        Difference between root properties and typical ranges
+    """
+    labels = ['n_files', 'n_folders', 'breadth_max', 'breadth_mean',
+              'root_n_folders', 'n_leaf_folders', 'pct_leaf_folders',
+              'depth_leaf_folders_mean', 'n_switch_folders',
+              'pct_switch_folders', 'depth_switch_folders_mean', 'depth_max',
+              'depth_folders_mode', 'depth_folders_mean', 'branching_factor',
+              'root_n_files', 'n_files_mean', 'n_empty_folders',
+              'pct_empty_folders', 'depth_files_mean', 'depth_files_mode',
+              'file_breadth_mode_n_files']
+    typical_ranges = {
+        'n_files': [29123, 193001],
+        'n_folders': [3818, 26363],
+        'breadth_max': [947, 4990],
+        'breadth_mean': [290, 888],
+        'root_n_folders': [15, 18],
+        'n_leaf_folders': [2582, 18192],
+        'pct_leaf_folders': [66, 80],
+        'depth_leaf_folders_mean': [5.2, 8.8],
+        'n_switch_folders': [591, 4291],
+        'pct_switch_folders': [9, 23],
+        'depth_switch_folders_mean': [4.75, 8.25],
+        'depth_max': [12, 18],
+        'depth_folders_mode': [5, 7],
+        'depth_folders_mean': [6, 8],
+        'branching_factor': [3, 4.5],
+        'root_n_files': [properties['n_roots']*x for x in [4, 8]],
+        'n_files_mean': [6, 8],
+        'n_empty_folders': [304, 3057],
+        'pct_empty_folders': [5, 12],
+        'depth_files_mean': [5, 8],
+        'depth_files_mode': [4, 4],
+        'file_breadth_mode_n_files': [9892, 52230]
+    }
     is_typical_dict = dict(zip(labels, [True]*len(labels)))
     diff_dict = dict(zip(labels, [None]*len(labels)))
     for label in labels:
@@ -332,27 +374,22 @@ def check_collection_properties(properties):
                 diff_dict[label] = properties[label] - typical_ranges[label][1]
         else:
             diff_dict[label] = None
-        # print(label, properties[label], diff_dict[label])
     return all(is_typical_dict.values()), typical_ranges, diff_dict
 
 
 if __name__ == "__main__":
-    root_path = os.path.expanduser(os.path.join('~', 'Dropbox'))
-    # root_path = os.path.expanduser(os.path.join('~', 'Downloads'))
+    root_path = str(Path('~', 'Dropbox').expanduser())
     test_dir_dict = record_stat(root_path)
     test_dir_dict = compute_stat(test_dir_dict)
     anonymize_stat(test_dir_dict, [1])
     test_dir_dict = record_stat(root_path)
     test_dir_dict = compute_stat(test_dir_dict)
-    with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                              'code', 'drive_analysis_tool', 'dir_dict.pkl')), 'wb') as ddf:
+    test_dir_dict_path = Path('~/Dropbox/mcgill/File Zoomer/code/'
+                              'drive_analysis_tool/dir_dict.pkl').expanduser()
+    with open(test_dir_dict_path, 'wb') as ddf:
         pickle.dump(test_dir_dict, ddf, pickle.HIGHEST_PROTOCOL)
-    # with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-    #                                           'code', 'drive_analysis_tool', 'dir_dict.pkl')), 'rb') as ddf:
-    #     dir_dict = pickle.load(ddf)
     print(test_dir_dict[1])
-    # assign_folder_depth(1, test_dir_dict)
-    test_dir_dict_props = drive_measurement(test_dir_dict)
+    test_dir_dict_props = drive_measurement([test_dir_dict])
     print(test_dir_dict_props)
     print(check_collection_properties(test_dir_dict_props))
     depths_list = [test_dir_dict[key]['depth'] for key in test_dir_dict.keys()]

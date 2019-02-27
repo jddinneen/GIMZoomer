@@ -6,6 +6,7 @@ import random
 import string
 import time
 import lzma
+from pathlib import Path
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
@@ -23,15 +24,20 @@ yCktFRWRV/VVcjrIjGckYckhsuHPFbr5/NZOZ4FS/w/TKXxFW9Az7Lq4onTzemcr
 cwIDAQAB
 -----END PUBLIC KEY-----
 '''
-
-with open(os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                          'dbx_access_token.txt'))) as f:
+dbx_token_path = Path(
+    '~/Dropbox/mcgill/File Zoomer/dbx_access_token.txt').expanduser()
+with open(dbx_token_path) as f:
     dbx_access_token = f.read()
+# When compiling program to send out to others, past token string below
+# instead of opening the file. Not really secure but meh.
+# dbx_access_token = ''
 
 
-def generate_filename(name_length=16, time_suffix=True, prefix=None, suffix=None):
+def generate_filename(name_length=16, time_suffix=True, prefix=None,
+                      suffix=None):
     current_time = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-    filename = ''.join(random.choices(string.ascii_letters + string.digits, k=name_length))
+    filename = ''.join(random.choices(string.ascii_letters + string.digits,
+                                      k=name_length))
     if time_suffix:
         filename += '_' + current_time
     if prefix:
@@ -50,7 +56,8 @@ def get_filepath(dirpath, filename, sep='/'):
 
 
 def encrypt_fernet_key(fernet_key, public_key):
-    public_key = serialization.load_pem_public_key(public_key, default_backend())
+    public_key = serialization.load_pem_public_key(
+        public_key, default_backend())
     encrypted_key = public_key.encrypt(fernet_key, padding=padding.OAEP(
         mgf=padding.MGF1(algorithm=hashes.SHA256()),
         algorithm=hashes.SHA256(),
@@ -73,8 +80,8 @@ def encrypt_data(bytes_data_list, public_key=public_rsa_key):
     return encrypted_data_list, encrypted_key
 
 
-def dropbox_upload(bytes_data, filepath, access_token=dbx_access_token, access_token_path=None):
-    # exposing access token is unsafe but whatevs
+def dropbox_upload(bytes_data, filepath, access_token=dbx_access_token,
+                   access_token_path=None):
     if access_token_path:
         with open(access_token_path) as token_f:
             access_token = token_f.read()
@@ -84,15 +91,14 @@ def dropbox_upload(bytes_data, filepath, access_token=dbx_access_token, access_t
 
 if __name__ == '__main__':
     # Define filepaths
-    dir_dict_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                              'code', 'drive_analysis_tool', 'dir_dict.pkl'))
-    json_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                              'code', 'drive_analysis_tool', 'dir_dict.enc'))
-    jsonkey_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                              'code', 'drive_analysis_tool', 'sym_key.enc'))
-    dropbox_access_token_filepath = os.path.expanduser(os.path.join('~', 'Dropbox', 'mcgill', 'File Zoomer',
-                                                                    'dropbox.key'))
-    # dbx_json_dirpath = os.path.expanduser(os.path.join('~', 'Dropbox', 'Apps', 'Drive Analysis Tool'))
+    dir_dict_filepath = Path('~/Dropbox/mcgill/File Zoomer/code/'
+                             'drive_analysis_tool/dir_dict.pkl').expanduser()
+    json_filepath = Path('~/Dropbox/mcgill/File Zoomer/code/'
+                         'drive_analysis_tool/dir_dict.enc').expanduser()
+    jsonkey_filepath = Path('~/Dropbox/mcgill/File Zoomer/code/'
+                            'drive_analysis_tool/sym_key.enc').expanduser()
+    dropbox_access_token_filepath = Path('~/Dropbox/mcgill/File Zoomer/'
+                                         'dropbox.key').expanduser()
     dbx_json_dirpath = '/'
 
     # Load test dict, turn into bytes, compress bytes
@@ -110,8 +116,10 @@ if __name__ == '__main__':
 
     # Upload dict and Fernet key to Dropbox
     dropbox_upload(encrypted_json,
-                   get_filepath(dbx_json_dirpath, generate_filename(suffix='_dir_dict.enc')),
+                   get_filepath(dbx_json_dirpath,
+                                generate_filename(suffix='_dir_dict.enc')),
                    access_token_path=dropbox_access_token_filepath)
     dropbox_upload(encrypted_jsonkey,
-                   get_filepath(dbx_json_dirpath, generate_filename(suffix='_sym_key.enc')),
+                   get_filepath(dbx_json_dirpath,
+                                generate_filename(suffix='_sym_key.enc')),
                    access_token_path=dropbox_access_token_filepath)
