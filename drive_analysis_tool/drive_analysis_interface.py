@@ -1,3 +1,7 @@
+"""
+waitingspinnerwidget from https://github.com/z3ntu/QtWaitingSpinner
+"""
+
 import _pickle
 import json
 import sys
@@ -15,6 +19,7 @@ from drive_analyzer import (record_stat, anonymize_stat, drive_measurement,
                             check_collection_properties)
 from submit_data import (compress_data, encrypt_data, dropbox_upload,
                          generate_filename, get_filepath)
+from waitingspinnerwidget import QtWaitingSpinner
 
 
 def path_str(root_path):
@@ -171,32 +176,40 @@ class DriveAnalysisWidget(QWidget):
         select_btn_4.clicked.connect(self.show_file_dialog_4)
         select_btn_4.resize(select_btn_4.sizeHint())
 
-        self.dir_error = QMessageBox()
+        self.alert_box = QMessageBox()
+        self.no_root_error_msg = ('No folder selected. '
+                                  'To exclude root folder from submission, '
+                                  '<b>click \'Select Root\'</b> then '
+                                  '<b>click \'Cancel\'</b>.')
 
         preview_btn_tip = 'Preview folder data that will be used for research'
         preview_btn_txt = 'Recalculate'
-        preview_btn = QPushButton(preview_btn_txt, self)
-        preview_btn.setToolTip(preview_btn_tip)
-        preview_btn.clicked.connect(self.preview_anon_tree_threaded)
-        preview_btn.resize(preview_btn.sizeHint())
-        preview_btn_2 = QPushButton(preview_btn_txt, self)
-        preview_btn_2.setToolTip(preview_btn_tip)
-        preview_btn_2.clicked.connect(self.preview_anon_tree_threaded_2)
-        preview_btn_2.resize(preview_btn_2.sizeHint())
-        preview_btn_3 = QPushButton(preview_btn_txt, self)
-        preview_btn_3.setToolTip(preview_btn_tip)
-        preview_btn_3.clicked.connect(self.preview_anon_tree_threaded_3)
-        preview_btn_3.resize(preview_btn_3.sizeHint())
-        preview_btn_4 = QPushButton(preview_btn_txt, self)
-        preview_btn_4.setToolTip(preview_btn_tip)
-        preview_btn_4.clicked.connect(self.preview_anon_tree_threaded_4)
-        preview_btn_4.resize(preview_btn_4.sizeHint())
+        self.preview_btn = QPushButton(preview_btn_txt, self)
+        self.preview_btn.setToolTip(preview_btn_tip)
+        self.preview_btn.clicked.connect(self.preview_anon_tree_threaded)
+        self.preview_btn.resize(self.preview_btn.sizeHint())
+        self.preview_btn.setDisabled(True)
+        self.preview_btn_2 = QPushButton(preview_btn_txt, self)
+        self.preview_btn_2.setToolTip(preview_btn_tip)
+        self.preview_btn_2.clicked.connect(self.preview_anon_tree_threaded_2)
+        self.preview_btn_2.resize(self.preview_btn_2.sizeHint())
+        self.preview_btn_2.setDisabled(True)
+        self.preview_btn_3 = QPushButton(preview_btn_txt, self)
+        self.preview_btn_3.setToolTip(preview_btn_tip)
+        self.preview_btn_3.clicked.connect(self.preview_anon_tree_threaded_3)
+        self.preview_btn_3.resize(self.preview_btn_3.sizeHint())
+        self.preview_btn_3.setDisabled(True)
+        self.preview_btn_4 = QPushButton(preview_btn_txt, self)
+        self.preview_btn_4.setToolTip(preview_btn_tip)
+        self.preview_btn_4.clicked.connect(self.preview_anon_tree_threaded_4)
+        self.preview_btn_4.resize(self.preview_btn_4.sizeHint())
+        self.preview_btn_4.setDisabled(True)
 
         self.submit_btn = QPushButton('Submit', self)
         self.submit_btn.setToolTip('Submit encrypted folder data to the cloud')
-        self.submit_btn.clicked.connect(self.upload_collected_data)
+        self.submit_btn.clicked.connect(self.upload_collected_data_threaded)
         self.submit_btn.resize(self.submit_btn.sizeHint())
-        self.submit_btn.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
         self.cancel_btn = QPushButton('Cancel')
         self.cancel_btn.setToolTip('Quit program without collecting any data.')
@@ -400,7 +413,7 @@ class DriveAnalysisWidget(QWidget):
         self.tab1.layout.addWidget(anon_tree_label, 1, 5, 1, 3)
         self.tab1.layout.addWidget(self.og_tree, 2, 0, 1, 5)
         self.tab1.layout.addWidget(self.anon_tree, 2, 5, 1, 3)
-        self.tab1.layout.addWidget(preview_btn, 3, 7, 1, 1)
+        self.tab1.layout.addWidget(self.preview_btn, 3, 7, 1, 1)
         self.tab1.setLayout(self.tab1.layout)
         # Create second tab
         self.tab2.layout = QGridLayout()
@@ -410,7 +423,7 @@ class DriveAnalysisWidget(QWidget):
         self.tab2.layout.addWidget(anon_tree_label_2, 1, 5, 1, 3)
         self.tab2.layout.addWidget(self.og_tree_2, 2, 0, 1, 5)
         self.tab2.layout.addWidget(self.anon_tree_2, 2, 5, 1, 3)
-        self.tab2.layout.addWidget(preview_btn_2, 3, 7, 1, 1)
+        self.tab2.layout.addWidget(self.preview_btn_2, 3, 7, 1, 1)
         self.tab2.setLayout(self.tab2.layout)
         # Create third tab
         self.tab3.layout = QGridLayout()
@@ -420,7 +433,7 @@ class DriveAnalysisWidget(QWidget):
         self.tab3.layout.addWidget(anon_tree_label_3, 1, 5, 1, 3)
         self.tab3.layout.addWidget(self.og_tree_3, 2, 0, 1, 5)
         self.tab3.layout.addWidget(self.anon_tree_3, 2, 5, 1, 3)
-        self.tab3.layout.addWidget(preview_btn_3, 3, 7, 1, 1)
+        self.tab3.layout.addWidget(self.preview_btn_3, 3, 7, 1, 1)
         self.tab3.setLayout(self.tab3.layout)
         # Create fourth tab
         self.tab4.layout = QGridLayout()
@@ -430,7 +443,7 @@ class DriveAnalysisWidget(QWidget):
         self.tab4.layout.addWidget(anon_tree_label_4, 1, 5, 1, 3)
         self.tab4.layout.addWidget(self.og_tree_4, 2, 0, 1, 5)
         self.tab4.layout.addWidget(self.anon_tree_4, 2, 5, 1, 3)
-        self.tab4.layout.addWidget(preview_btn_4, 3, 7, 1, 1)
+        self.tab4.layout.addWidget(self.preview_btn_4, 3, 7, 1, 1)
         self.tab4.setLayout(self.tab4.layout)
 
         bottom_hbox = QGridLayout()
@@ -457,6 +470,17 @@ class DriveAnalysisWidget(QWidget):
         vbox.addWidget(splitter)
         self.setLayout(vbox)
         self.resize(1280, 720)
+
+        self.spinner = QtWaitingSpinner(self, True, True, Qt.ApplicationModal)
+        self.spinner.setRoundness(70.0)
+        self.spinner.setMinimumTrailOpacity(15.0)
+        self.spinner.setTrailFadePercentage(70.0)
+        self.spinner.setNumberOfLines(12)
+        self.spinner.setLineLength(30)
+        self.spinner.setLineWidth(10)
+        self.spinner.setInnerRadius(15)
+        self.spinner.setRevolutionsPerSecond(1)
+
         self.show()
 
     def refresh_treeview(self, model, tree, dir_dict,
@@ -523,6 +547,8 @@ class DriveAnalysisWidget(QWidget):
         if item.column() == 1:
             dirkey = item.data(Qt.UserRole)
             self.renamed_items_dict[dirkey] = item.text()
+        self.preview_btn.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
     def on_item_change_2(self, item):
         if item.column() == 0:
@@ -551,6 +577,8 @@ class DriveAnalysisWidget(QWidget):
         if item.column() == 1:
             dirkey = item.data(Qt.UserRole)
             self.renamed_items_dict_2[dirkey] = item.text()
+        self.preview_btn_2.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
     def on_item_change_3(self, item):
         if item.column() == 0:
@@ -579,6 +607,8 @@ class DriveAnalysisWidget(QWidget):
         if item.column() == 1:
             dirkey = item.data(Qt.UserRole)
             self.renamed_items_dict_3[dirkey] = item.text()
+        self.preview_btn_3.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
     def on_item_change_4(self, item):
         if item.column() == 0:
@@ -607,6 +637,8 @@ class DriveAnalysisWidget(QWidget):
         if item.column() == 1:
             dirkey = item.data(Qt.UserRole)
             self.renamed_items_dict_4[dirkey] = item.text()
+        self.preview_btn_4.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
     def propagate_checkstate_child(
             self, parent_item, child_ix, parent_checkstate):
@@ -682,21 +714,6 @@ class DriveAnalysisWidget(QWidget):
             for child_ix in range(nchild):
                 self.list_unchecked(parent_item, child_ix, unchecked_items)
 
-    def on_item_change_threaded(self, item):
-        worker = Worker(self.on_item_change, item)
-        worker.signals.started.connect(self.on_item_change_started)
-        worker.signals.result.connect(self.on_item_change_finished)
-        self.threadpool.start(worker)
-
-    def on_item_change_started(self):
-        """ Status messages during tree modification should be placed here. """
-        pass
-
-    def on_item_change_finished(self):
-        """ Status messages when tree modification is complete should be
-        placed here. """
-        pass
-
     def build_tree_structure_threaded(self, root_path):
         worker = Worker(record_stat, root_path)
         worker.signals.started.connect(self.build_tree_started)
@@ -705,7 +722,10 @@ class DriveAnalysisWidget(QWidget):
 
     def build_tree_started(self):
         """ Status messages when building a tree should be placed here. """
-        pass
+        self.expanded_items_list = []
+        self.unchecked_items_set = set()
+        self.renamed_items_dict = dict()
+        self.spinner.start()
 
     def build_tree_finished(self, result):
         """ Status messages when tree building is complete should be
@@ -716,6 +736,8 @@ class DriveAnalysisWidget(QWidget):
         self.refresh_treeview(
             self.anon_model, self.anon_tree, self.anon_dir_dict,
             checkable=False, anon_tree=True)
+        self.preview_btn.setEnabled(True)
+        self.spinner.stop()
 
     def build_tree_structure_threaded_2(self, root_path):
         worker = Worker(record_stat, root_path)
@@ -725,7 +747,10 @@ class DriveAnalysisWidget(QWidget):
 
     def build_tree_started_2(self):
         """ Status messages when building a tree should be placed here. """
-        pass
+        self.expanded_items_list_2 = []
+        self.unchecked_items_set_2 = set()
+        self.renamed_items_dict_2 = dict()
+        self.spinner.start()
 
     def build_tree_finished_2(self, result):
         """ Status messages when tree building is complete should be
@@ -737,6 +762,8 @@ class DriveAnalysisWidget(QWidget):
         self.refresh_treeview(
             self.anon_model_2, self.anon_tree_2, self.anon_dir_dict_2,
             checkable=False, anon_tree=True)
+        self.preview_btn_2.setEnabled(True)
+        self.spinner.stop()
 
     def build_tree_structure_threaded_3(self, root_path):
         worker = Worker(record_stat, root_path)
@@ -746,7 +773,10 @@ class DriveAnalysisWidget(QWidget):
 
     def build_tree_started_3(self):
         """ Status messages when building a tree should be placed here. """
-        pass
+        self.expanded_items_list_3 = []
+        self.unchecked_items_set_3 = set()
+        self.renamed_items_dict_3 = dict()
+        self.spinner.start()
 
     def build_tree_finished_3(self, result):
         """ Status messages when tree building is complete should be
@@ -758,6 +788,8 @@ class DriveAnalysisWidget(QWidget):
         self.refresh_treeview(
             self.anon_model_3, self.anon_tree_3, self.anon_dir_dict_3,
             checkable=False, anon_tree=True)
+        self.preview_btn_3.setEnabled(True)
+        self.spinner.stop()
 
     def build_tree_structure_threaded_4(self, root_path):
         worker = Worker(record_stat, root_path)
@@ -767,7 +799,10 @@ class DriveAnalysisWidget(QWidget):
 
     def build_tree_started_4(self):
         """ Status messages when building a tree should be placed here. """
-        pass
+        self.expanded_items_list_4 = []
+        self.unchecked_items_set_4 = set()
+        self.renamed_items_dict_4 = dict()
+        self.spinner.start()
 
     def build_tree_finished_4(self, result):
         """ Status messages when tree building is complete should be
@@ -779,6 +814,8 @@ class DriveAnalysisWidget(QWidget):
         self.refresh_treeview(
             self.anon_model_4, self.anon_tree_4, self.anon_dir_dict_4,
             checkable=False, anon_tree=True)
+        self.preview_btn_4.setEnabled(True)
+        self.spinner.stop()
 
     def preview_anon_tree(self):
         """ Preview anonymized tree. Quite an intensive task. Check the time
@@ -814,10 +851,8 @@ class DriveAnalysisWidget(QWidget):
                         self.user_folder_props_table.setItem(row, 2, min_item)
                         self.user_folder_props_table.setItem(row, 3, max_item)
                         self.user_folder_props_table.setItem(row, 4, diff_item)
-                self.dir_error.about(
-                    self, 'Error', 'No folder selected, '
-                                   '<b>click \'Clear Selection\'</b> to '
-                                   'exclude folder from submission.')
+                self.alert_box.about(
+                    self, 'Error', self.no_root_error_msg)
             else:
                 worker = Worker(self.preview_anon_tree)
                 worker.signals.started.connect(self.preview_anon_tree_started)
@@ -829,12 +864,15 @@ class DriveAnalysisWidget(QWidget):
     def preview_anon_tree_started(self):
         """ Status messages when previewing an anonymized tree should be
         placed here. """
-        pass
+        self.spinner.start()
 
     def preview_anon_tree_finished(self):
         """ Status messages when an anonymized tree has been previewed should
         be placed here. """
         self.display_user_folder_props()
+        self.preview_btn.setDisabled(True)
+        self.submit_btn.setEnabled(True)
+        self.spinner.stop()
 
     def preview_anon_tree_2(self):
         self.anon_dir_dict_2 = _pickle.loads(_pickle.dumps(self.og_dir_dict_2))
@@ -869,10 +907,8 @@ class DriveAnalysisWidget(QWidget):
                         self.user_folder_props_table.setItem(row, 2, min_item)
                         self.user_folder_props_table.setItem(row, 3, max_item)
                         self.user_folder_props_table.setItem(row, 4, diff_item)
-                self.dir_error.about(
-                    self, 'Error', 'No folder selected, '
-                                   '<b>click \'Clear Selection\'</b> to '
-                                   'exclude folder from submission.')
+                self.alert_box.about(
+                    self, 'Error', self.no_root_error_msg)
             else:
                 worker = Worker(self.preview_anon_tree_2)
                 worker.signals.started.connect(
@@ -886,12 +922,15 @@ class DriveAnalysisWidget(QWidget):
     def preview_anon_tree_started_2(self):
         """ Status messages when previewing an anonymized tree should be
         placed here. """
-        pass
+        self.spinner.start()
 
     def preview_anon_tree_finished_2(self):
         """ Status messages when an anonymized tree has been previewed should
         be placed here. """
         self.display_user_folder_props()
+        self.preview_btn_2.setDisabled(True)
+        self.submit_btn.setEnabled(True)
+        self.spinner.stop()
 
     def preview_anon_tree_3(self):
         self.anon_dir_dict_3 = _pickle.loads(_pickle.dumps(self.og_dir_dict_3))
@@ -927,10 +966,8 @@ class DriveAnalysisWidget(QWidget):
                         self.user_folder_props_table.setItem(row, 2, min_item)
                         self.user_folder_props_table.setItem(row, 3, max_item)
                         self.user_folder_props_table.setItem(row, 4, diff_item)
-                self.dir_error.about(
-                    self, 'Error', 'No folder selected, '
-                                   '<b>click \'Clear Selection\'</b> to '
-                                   'exclude folder from submission.')
+                self.alert_box.about(
+                    self, 'Error', self.no_root_error_msg)
             else:
                 worker = Worker(self.preview_anon_tree_3)
                 worker.signals.started.connect(
@@ -944,12 +981,15 @@ class DriveAnalysisWidget(QWidget):
     def preview_anon_tree_started_3(self):
         """ Status messages when previewing an anonymized tree should be
         placed here. """
-        pass
+        self.spinner.start()
 
     def preview_anon_tree_finished_3(self):
         """ Status messages when an anonymized tree has been previewed should
         be placed here. """
         self.display_user_folder_props()
+        self.preview_btn_3.setDisabled(True)
+        self.submit_btn.setEnabled(True)
+        self.spinner.stop()
 
     def preview_anon_tree_4(self):
         self.anon_dir_dict_4 = _pickle.loads(_pickle.dumps(self.og_dir_dict_4))
@@ -985,10 +1025,8 @@ class DriveAnalysisWidget(QWidget):
                         self.user_folder_props_table.setItem(row, 2, min_item)
                         self.user_folder_props_table.setItem(row, 3, max_item)
                         self.user_folder_props_table.setItem(row, 4, diff_item)
-                self.dir_error.about(
-                    self, 'Error', 'No folder selected, '
-                                   '<b>click \'Clear Selection\'</b> to '
-                                   'exclude folder from submission.')
+                self.alert_box.about(
+                    self, 'Error', self.no_root_error_msg)
             else:
                 worker = Worker(self.preview_anon_tree_4)
                 worker.signals.started.connect(
@@ -1002,12 +1040,15 @@ class DriveAnalysisWidget(QWidget):
     def preview_anon_tree_started_4(self):
         """ Status messages when previewing an anonymized tree should be
         placed here. """
-        pass
+        self.spinner.start()
 
     def preview_anon_tree_finished_4(self):
         """ Status messages when an anonymized tree has been previewed should
         be placed here. """
         self.display_user_folder_props()
+        self.preview_btn_4.setDisabled(True)
+        self.submit_btn.setEnabled(True)
+        self.spinner.stop()
 
     def display_user_folder_props(self):
         try:
@@ -1062,7 +1103,7 @@ class DriveAnalysisWidget(QWidget):
             self.header_autoresizable(
                 self.user_folder_props_table.horizontalHeader())
         except Exception as e:
-            self.dir_error.about(
+            self.alert_box.about(
                 self, 'Error',
                 'Incapable of computing statistics with current root and/or '
                 'folder selections: ' + str(e) + '<br><br>' +
@@ -1090,7 +1131,7 @@ class DriveAnalysisWidget(QWidget):
                 'Root Folder 1', dirpath,
                 [self.root_path_2, self.root_path_3, self.root_path_4])
             if root_overlap:
-                self.dir_error.about(self, 'Error', root_overlap)
+                self.alert_box.about(self, 'Error', root_overlap)
             else:
                 self.root_path = Path(dirpath)
                 self.folder_edit.setText(path_str(self.root_path))
@@ -1106,7 +1147,7 @@ class DriveAnalysisWidget(QWidget):
                 'Root Folder 2', dirpath,
                 [self.root_path, self.root_path_3, self.root_path_4])
             if root_overlap:
-                self.dir_error.about(self, 'Error', root_overlap)
+                self.alert_box.about(self, 'Error', root_overlap)
             else:
                 self.root_path_2 = Path(dirpath)
                 self.folder_edit_2.setText(path_str(self.root_path_2))
@@ -1122,7 +1163,7 @@ class DriveAnalysisWidget(QWidget):
                 'Root Folder 3', dirpath,
                 [self.root_path, self.root_path_2, self.root_path_4])
             if root_overlap:
-                self.dir_error.about(self, 'Error', root_overlap)
+                self.alert_box.about(self, 'Error', root_overlap)
             else:
                 self.root_path_3 = Path(dirpath)
                 self.folder_edit_3.setText(path_str(self.root_path_3))
@@ -1138,7 +1179,7 @@ class DriveAnalysisWidget(QWidget):
                 'Root Folder 4', dirpath,
                 [self.root_path, self.root_path_2, self.root_path_3])
             if root_overlap:
-                self.dir_error.about(self, 'Error', root_overlap)
+                self.alert_box.about(self, 'Error', root_overlap)
             else:
                 self.root_path_4 = Path(dirpath)
                 self.folder_edit_4.setText(path_str(self.root_path_4))
@@ -1183,28 +1224,35 @@ class DriveAnalysisWidget(QWidget):
         self.anon_model_4.removeRow(0)
 
     def upload_collected_data(self):
-        # TODO: For large files, this needs have its own separate thread
         data_list = []
         if self.root_path and len(self.unchecked_items_set) != len(
                 self.og_dir_dict.keys()):
             data_1 = bytes(json.dumps(self.anon_dir_dict), 'utf8')
             data_1 = compress_data(data_1)
             data_list.append(data_1)
+            with open('uploaded_file_1.json', 'w') as f1:
+                json.dump(self.anon_dir_dict, f1, indent=4)
         if self.root_path_2 and len(self.unchecked_items_set_2) != len(
                 self.og_dir_dict_2.keys()):
             data_2 = bytes(json.dumps(self.anon_dir_dict_2), 'utf8')
             data_2 = compress_data(data_2)
             data_list.append(data_2)
+            with open('uploaded_file_2.json', 'w') as f2:
+                json.dump(self.anon_dir_dict_2, f2, indent=4)
         if self.root_path_3 and len(self.unchecked_items_set_3) != len(
                 self.og_dir_dict_3.keys()):
             data_3 = bytes(json.dumps(self.anon_dir_dict_3), 'utf8')
             data_3 = compress_data(data_3)
             data_list.append(data_3)
+            with open('uploaded_file_3.json', 'w') as f3:
+                json.dump(self.anon_dir_dict_3, f3, indent=4)
         if self.root_path_4 and len(self.unchecked_items_set_4) != len(
                 self.og_dir_dict_4.keys()):
             data_4 = bytes(json.dumps(self.anon_dir_dict_4), 'utf8')
             data_4 = compress_data(data_4)
             data_list.append(data_4)
+            with open('uploaded_file_4.json', 'w') as f4:
+                json.dump(self.anon_dir_dict_4, f4, indent=4)
         encrypted_json_list, encrypted_jsonkey = encrypt_data(data_list)
         unique_id = generate_filename()
         for ix, encrypted_json in enumerate(encrypted_json_list):
@@ -1214,6 +1262,24 @@ class DriveAnalysisWidget(QWidget):
                            get_filepath(self.dbx_json_dirpath, dir_dict_fname))
         dropbox_upload(encrypted_jsonkey,
                        get_filepath(self.dbx_json_dirpath, sym_key_fname))
+
+    def upload_collected_data_threaded(self):
+        worker = Worker(self.upload_collected_data)
+        worker.signals.started.connect(self.upload_collected_data_started)
+        worker.signals.result.connect(self.upload_collected_data_finished)
+        self.threadpool.start(worker)
+
+    def upload_collected_data_started(self):
+        self.spinner.start()
+
+    def upload_collected_data_finished(self):
+        self.spinner.stop()
+        self.alert_box.about(
+            self, 'Upload complete',
+            'Folder data has been uploaded to the researchers.\n\nCopies of '
+            'the uploaded data has been saved in the Drive Analysis Tool '
+            'folder for user inspection. JSON files can be opened with text '
+            'editors such as Notepad.')
 
     @staticmethod
     def header_autoresizable(header):
