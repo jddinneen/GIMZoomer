@@ -1309,14 +1309,15 @@ class DriveAnalysisWidget(QWidget):
         if self.any_upload_failure:
             self.alert_box.about(
                 self, 'Error',
-                'Upload failed. Please email the encoded result files (files '
-                'ending in dir_dict_<index>.enc and sym_key.enc) to the '
-                'researchers at email@address.edu .')
+                'Upload failed. Please email the encrypted result files '
+                '(files ending in <b>dir_dict_.enc</b> and '
+                '<b>sym_key.enc</b>) to the researchers at '
+                '<b>email@address.edu</b> .')
         else:
             self.alert_box.about(
                 self, 'Upload complete',
                 'Folder data has been uploaded to the researchers.\n\nCopies '
-                'of the encrypted data file (.enc) have been saved in the '
+                'of the encrypted data files (.enc) have been saved in the '
                 'Drive Analyzer folder. Non-encrypted data files (.json) '
                 'which were not uploaded have been saved as well. JSON files '
                 'can be opened for inspection with text editors such as '
