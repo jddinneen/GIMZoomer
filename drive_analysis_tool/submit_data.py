@@ -86,7 +86,11 @@ def dropbox_upload(bytes_data, filepath, access_token=dbx_access_token,
         with open(access_token_path) as token_f:
             access_token = token_f.read()
     dbx = dropbox.Dropbox(access_token)
-    dbx.files_upload(bytes_data, filepath)
+    try:
+        dbx.files_upload(bytes_data, filepath)
+        return False
+    except Exception:
+        return True
 
 
 if __name__ == '__main__':

@@ -95,7 +95,7 @@ class DriveAnalysisWidget(QWidget):
         super().__init__()
 
         self.setWindowIcon(QIcon('images/icons8-opened-folder-480.png'))
-        self.setWindowTitle('Drive Analysis Tool')
+        self.setWindowTitle('Drive Analyzer')
         self.root_path = None
         # self.root_path = Path('~/Dropbox/academic').expanduser()
         self.root_path_2 = None
@@ -105,6 +105,7 @@ class DriveAnalysisWidget(QWidget):
         self.root_path_4 = None
         # self.root_path_4 = Path('~/Dropbox/mcgill/2017 Fall').expanduser()
         self.dbx_json_dirpath = '/'
+        self.any_upload_failure = False
         self.threadpool = QThreadPool()
         self.expanded_items_list = []
         self.expanded_items_list_2 = []
@@ -186,7 +187,7 @@ class DriveAnalysisWidget(QWidget):
         self.submit_btn.setToolTip('Submit encrypted folder data to the cloud')
         self.submit_btn.clicked.connect(self.upload_collected_data_threaded)
         self.submit_btn.resize(self.submit_btn.sizeHint())
-        self.submit_btn.setEnabled(True)
+        self.submit_btn.setDisabled(True)
 
         self.cancel_btn = QPushButton('Cancel')
         self.cancel_btn.setToolTip('Quit program without collecting any data.')
@@ -205,10 +206,8 @@ class DriveAnalysisWidget(QWidget):
             'Folder structure',  # category header
             'Greatest breadth of folder tree',
             'Average breadth of folder tree', '# folders at root',
-            '# leaf folders (folders without subfolders)',
             '% leaf folders (folders without subfolders)',
             'Average depth of leaf folders (folders without subfolders)',
-            '# switch folders (folders with subfolders and no files)',
             '% switch folders (folders with subfolders and no files)',
             'Average depth of switch folders '
             '(folders with subfolders and no files)',
@@ -219,7 +218,7 @@ class DriveAnalysisWidget(QWidget):
             'excepting leaf folders)',
             'File structure',  # category header
             '# files at root', 'Average # files in folders',
-            '# empty folders', '% empty folders',
+            '% empty folders',
             'Average depth where files are found',
             'Depth where files are most commonly found',
             '# files at depth where files are most commonly found'
@@ -228,12 +227,12 @@ class DriveAnalysisWidget(QWidget):
             '_CAT1',  # category header
             'n_files', 'n_folders',
             '_CAT2',  # category header
-            'breadth_max', 'breadth_mean', 'root_n_folders', 'n_leaf_folders',
-            'pct_leaf_folders', 'depth_leaf_folders_mean', 'n_switch_folders',
+            'breadth_max', 'breadth_mean', 'root_n_folders',
+            'pct_leaf_folders', 'depth_leaf_folders_mean',
             'pct_switch_folders', 'depth_switch_folders_mean', 'depth_max',
             'depth_folders_mode', 'depth_folders_mean', 'branching_factor',
             '_CAT3',  # category header
-            'root_n_files', 'n_files_mean', 'n_empty_folders',
+            'root_n_files', 'n_files_mean',
             'pct_empty_folders', 'depth_files_mean', 'depth_files_mode',
             'file_breadth_mode_n_files'
         ]
@@ -259,7 +258,7 @@ class DriveAnalysisWidget(QWidget):
                 label_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 label_item.setData(Qt.UserRole, label_key)
                 value_item, min_item, max_item, diff_item = \
-                    self.empty_folder_props()
+                    self.empty_props_values()
                 self.user_folder_props_table.setItem(row, 0, label_item)
                 self.user_folder_props_table.setItem(row, 1, value_item)
                 self.user_folder_props_table.setItem(row, 2, min_item)
@@ -895,21 +894,10 @@ class DriveAnalysisWidget(QWidget):
         if self.root_path:
             if len(self.unchecked_items_set) == len(self.og_dir_dict.keys()):
                 self.anon_model.removeRow(0)
-                for row in range(self.n_props):
-                    label_key = self.user_folder_props_table.item(
-                        row, 0).data(Qt.UserRole)
-                    if label_key[0] == '_':
-                        pass
-                    else:
-                        (value_item, min_item,
-                         max_item, diff_item) = self.empty_folder_props()
-                        self.user_folder_props_table.setItem(
-                            row, 1, value_item)
-                        self.user_folder_props_table.setItem(row, 2, min_item)
-                        self.user_folder_props_table.setItem(row, 3, max_item)
-                        self.user_folder_props_table.setItem(row, 4, diff_item)
+                self.clear_user_folder_props()
                 self.alert_box.about(
                     self, 'Error', self.no_root_error_msg)
+                self.submit_btn.setDisabled(True)
             else:
                 worker = Worker(self.preview_anon_tree)
                 worker.signals.started.connect(self.preview_anon_tree_started)
@@ -949,21 +937,10 @@ class DriveAnalysisWidget(QWidget):
             if len(self.unchecked_items_set_2) == len(
                     self.og_dir_dict_2.keys()):
                 self.anon_model_2.removeRow(0)
-                for row in range(self.n_props):
-                    label_key = self.user_folder_props_table.item(
-                        row, 0).data(Qt.UserRole)
-                    if label_key[0] == '_':
-                        pass
-                    else:
-                        (value_item, min_item,
-                         max_item, diff_item) = self.empty_folder_props()
-                        self.user_folder_props_table.setItem(
-                            row, 1, value_item)
-                        self.user_folder_props_table.setItem(row, 2, min_item)
-                        self.user_folder_props_table.setItem(row, 3, max_item)
-                        self.user_folder_props_table.setItem(row, 4, diff_item)
+                self.clear_user_folder_props()
                 self.alert_box.about(
                     self, 'Error', self.no_root_error_msg)
+                self.submit_btn.setDisabled(True)
             else:
                 worker = Worker(self.preview_anon_tree_2)
                 worker.signals.started.connect(
@@ -1006,21 +983,10 @@ class DriveAnalysisWidget(QWidget):
             if len(self.unchecked_items_set_3) == len(
                     self.og_dir_dict_3.keys()):
                 self.anon_model_3.removeRow(0)
-                for row in range(self.n_props):
-                    label_key = self.user_folder_props_table.item(
-                        row, 0).data(Qt.UserRole)
-                    if label_key[0] == '_':
-                        pass
-                    else:
-                        (value_item, min_item,
-                         max_item, diff_item) = self.empty_folder_props()
-                        self.user_folder_props_table.setItem(
-                            row, 1, value_item)
-                        self.user_folder_props_table.setItem(row, 2, min_item)
-                        self.user_folder_props_table.setItem(row, 3, max_item)
-                        self.user_folder_props_table.setItem(row, 4, diff_item)
+                self.clear_user_folder_props()
                 self.alert_box.about(
                     self, 'Error', self.no_root_error_msg)
+                self.submit_btn.setDisabled(True)
             else:
                 worker = Worker(self.preview_anon_tree_3)
                 worker.signals.started.connect(
@@ -1063,21 +1029,10 @@ class DriveAnalysisWidget(QWidget):
             if len(self.unchecked_items_set_4) == len(
                     self.og_dir_dict_4.keys()):
                 self.anon_model_4.removeRow(0)
-                for row in range(self.n_props):
-                    label_key = self.user_folder_props_table.item(
-                        row, 0).data(Qt.UserRole)
-                    if label_key[0] == '_':
-                        pass
-                    else:
-                        (value_item, min_item,
-                         max_item, diff_item) = self.empty_folder_props()
-                        self.user_folder_props_table.setItem(
-                            row, 1, value_item)
-                        self.user_folder_props_table.setItem(row, 2, min_item)
-                        self.user_folder_props_table.setItem(row, 3, max_item)
-                        self.user_folder_props_table.setItem(row, 4, diff_item)
+                self.clear_user_folder_props()
                 self.alert_box.about(
                     self, 'Error', self.no_root_error_msg)
+                self.submit_btn.setDisabled(True)
             else:
                 worker = Worker(self.preview_anon_tree_4)
                 worker.signals.started.connect(
@@ -1159,18 +1114,8 @@ class DriveAnalysisWidget(QWidget):
                 'Please modify root and/or folder selections.' +
                 '<br><br><b>You may submit the data regardless.</b>')
             self.user_folder_typical = False
-            for row in range(self.n_props):
-                label_key = self.user_folder_props_table.item(
-                    row, 0).data(Qt.UserRole)
-                if label_key[0] == '_':  # identifies section headers
-                    pass
-                else:
-                    (value_item, min_item,
-                     max_item, diff_item) = self.empty_folder_props()
-                    self.user_folder_props_table.setItem(row, 1, value_item)
-                    self.user_folder_props_table.setItem(row, 2, min_item)
-                    self.user_folder_props_table.setItem(row, 3, max_item)
-                    self.user_folder_props_table.setItem(row, 4, diff_item)
+            self.clear_user_folder_props()
+        self.submit_btn.setEnabled(True)
 
     def show_file_dialog(self):
         dirpath = QFileDialog.getExistingDirectory(
@@ -1187,6 +1132,7 @@ class DriveAnalysisWidget(QWidget):
                 self.build_tree_structure_threaded(self.root_path)
         else:
             self.clear_root()
+            self.submit_btn.setDisabled(True)
 
     def show_file_dialog_2(self):
         dirpath = QFileDialog.getExistingDirectory(
@@ -1203,6 +1149,7 @@ class DriveAnalysisWidget(QWidget):
                 self.build_tree_structure_threaded_2(self.root_path_2)
         else:
             self.clear_root_2()
+            self.submit_btn.setDisabled(True)
 
     def show_file_dialog_3(self):
         dirpath = QFileDialog.getExistingDirectory(
@@ -1219,6 +1166,7 @@ class DriveAnalysisWidget(QWidget):
                 self.build_tree_structure_threaded_3(self.root_path_3)
         else:
             self.clear_root_3()
+            self.submit_btn.setDisabled(True)
 
     def show_file_dialog_4(self):
         dirpath = QFileDialog.getExistingDirectory(
@@ -1235,6 +1183,21 @@ class DriveAnalysisWidget(QWidget):
                 self.build_tree_structure_threaded_4(self.root_path_4)
         else:
             self.clear_root_4()
+            self.submit_btn.setDisabled(True)
+
+    def clear_user_folder_props(self):
+        for row in range(self.n_props):
+            label_key = self.user_folder_props_table.item(
+                row, 0).data(Qt.UserRole)
+            if label_key[0] == '_':  # identifies section headers
+                pass
+            else:
+                (value_item, min_item,
+                 max_item, diff_item) = self.empty_props_values()
+                self.user_folder_props_table.setItem(row, 1, value_item)
+                self.user_folder_props_table.setItem(row, 2, min_item)
+                self.user_folder_props_table.setItem(row, 3, max_item)
+                self.user_folder_props_table.setItem(row, 4, diff_item)
 
     def clear_root(self):
         self.root_path = None
@@ -1244,6 +1207,7 @@ class DriveAnalysisWidget(QWidget):
         self.folder_edit.setText(path_str(self.root_path))
         self.og_model.removeRow(0)
         self.anon_model.removeRow(0)
+        self.clear_user_folder_props()
 
     def clear_root_2(self):
         self.root_path_2 = None
@@ -1253,6 +1217,7 @@ class DriveAnalysisWidget(QWidget):
         self.folder_edit_2.setText(path_str(self.root_path_2))
         self.og_model_2.removeRow(0)
         self.anon_model_2.removeRow(0)
+        self.clear_user_folder_props()
 
     def clear_root_3(self):
         self.root_path_3 = None
@@ -1262,6 +1227,7 @@ class DriveAnalysisWidget(QWidget):
         self.folder_edit_3.setText(path_str(self.root_path_3))
         self.og_model_3.removeRow(0)
         self.anon_model_3.removeRow(0)
+        self.clear_user_folder_props()
 
     def clear_root_4(self):
         self.root_path_4 = None
@@ -1271,8 +1237,10 @@ class DriveAnalysisWidget(QWidget):
         self.folder_edit_4.setText(path_str(self.root_path_4))
         self.og_model_4.removeRow(0)
         self.anon_model_4.removeRow(0)
+        self.clear_user_folder_props()
 
     def upload_collected_data(self):
+        self.any_upload_failure = False
         data_list = []
         if self.root_path and len(self.unchecked_items_set) != len(
                 self.og_dir_dict.keys()):
@@ -1306,11 +1274,26 @@ class DriveAnalysisWidget(QWidget):
         unique_id = generate_filename()
         for ix, encrypted_json in enumerate(encrypted_json_list):
             dir_dict_fname = unique_id + '_dir_dict_' + str(ix+1) + '.enc'
+            with open(dir_dict_fname, 'wb') as dd_f:
+                dd_f.write(encrypted_json)
+        sym_key_fname = unique_id + '_sym_key.enc'
+        with open(sym_key_fname, 'wb') as sk_f:
+            sk_f.write(encrypted_jsonkey)
+        for ix, encrypted_json in enumerate(encrypted_json_list):
+            dir_dict_fname = unique_id + '_dir_dict_' + str(ix+1) + '.enc'
+            upload_failure = dropbox_upload(
+                encrypted_json,
+                get_filepath(self.dbx_json_dirpath, dir_dict_fname))
+            if upload_failure:
+                self.any_upload_failure = True
+                break
+        if not self.any_upload_failure:
             sym_key_fname = unique_id + '_sym_key.enc'
-            dropbox_upload(encrypted_json,
-                           get_filepath(self.dbx_json_dirpath, dir_dict_fname))
-        dropbox_upload(encrypted_jsonkey,
-                       get_filepath(self.dbx_json_dirpath, sym_key_fname))
+            upload_failure = dropbox_upload(
+                encrypted_jsonkey,
+                get_filepath(self.dbx_json_dirpath, sym_key_fname))
+            if upload_failure:
+                self.any_upload_failure = True
 
     def upload_collected_data_threaded(self):
         worker = Worker(self.upload_collected_data)
@@ -1323,12 +1306,21 @@ class DriveAnalysisWidget(QWidget):
 
     def upload_collected_data_finished(self):
         self.spinner.stop()
-        self.alert_box.about(
-            self, 'Upload complete',
-            'Folder data has been uploaded to the researchers.\n\nCopies of '
-            'the uploaded data has been saved in the Drive Analysis Tool '
-            'folder for user inspection. JSON files can be opened with text '
-            'editors such as Notepad.')
+        if self.any_upload_failure:
+            self.alert_box.about(
+                self, 'Error',
+                'Upload failed. Please email the encoded result files (files '
+                'ending in dir_dict_<index>.enc and sym_key.enc) to the '
+                'researchers at email@address.edu .')
+        else:
+            self.alert_box.about(
+                self, 'Upload complete',
+                'Folder data has been uploaded to the researchers.\n\nCopies '
+                'of the encrypted data file (.enc) have been saved in the '
+                'Drive Analyzer folder. Non-encrypted data files (.json) '
+                'which were not uploaded have been saved as well. JSON files '
+                'can be opened for inspection with text editors such as '
+                'Notepad.')
 
     @staticmethod
     def header_autoresizable(header):
@@ -1343,8 +1335,8 @@ class DriveAnalysisWidget(QWidget):
             header.resizeSection(column, width)
 
     @staticmethod
-    def empty_folder_props():
-        """ Clear all the values in the user folder properties table """
+    def empty_props_values():
+        """ N/A values for the user folder properties table """
         value_item = QTableWidgetItem('?')
         value_item.setTextAlignment(Qt.AlignRight)
         value_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
